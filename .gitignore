@@ -1,0 +1,22 @@
+# Private directory
+/priv
+
+# Dist directory
+/dist
+
+# Dist directory
+/build
+
+# Ignore QtCreator Project file
+/CMakeLists.txt.user*
+
+# Ignore Visual Studio/Code
+/CMakeSettings.json
+/.vs
+/.vscode
+
+# Ignore node_modules folder stores all the dependencies for a Node.js
+/node_modules
+
+# Ignore installed local dependencies
+/package-lock.json

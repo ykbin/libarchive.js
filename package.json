@@ -1,0 +1,43 @@
+{
+  "name": "libarchive",
+  "version": "0.0.1-develop.4",
+  "description": "Multi-format archive and compression library",
+  "author": "Yurii Yakubin",
+  "homepage": "https://github.com/ykbin/libarchive.js#readme",
+  "license": "MIT",
+  "types": "./dist/libarchive.d.ts",
+  "exports": {
+    ".": "./dist/libarchive.js",
+    "./wasm": "./dist/libarchive.wasm"
+  },
+  "bin": {
+    "libarchive": "dist/libarchive-cli.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "licenses/libarchive.COPYING",
+    "licenses/zlib.LICENSE"
+  ],
+  "scripts": {
+    "build:types": "dts-bundle-generator --config dtsconfig.js",
+    "build:debug": "webpack --config webpack.config.mjs --mode development",
+    "build:release": "webpack --config webpack.config.mjs --mode production"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ykbin/libarchive.js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ykbin/libarchive.js/issues",
+    "email": "yurii.yakubin@gmail.com"
+  },
+  "devDependencies": {
+    "dts-bundle-generator": "^9.5.1",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "webpack": "^5.99.5",
+    "webpack-cli": "^6.0.1",
+    "wasmux": "^0.0.3-develop.4"
+  }
+}

@@ -1,0 +1,8 @@
+This software includes [libarchive](https://github.com/libarchive/libarchive),
+which is licensed under a BSD-style license and may include components under
+BSD-3-Clause, Public Domain, Apache 2.0, or other compatible terms.
+
+Copyright (c) 2003-2018 Tim Kientzle
+All rights reserved.
+
+Please see `licenses/libarchive.COPYING` for full details.
