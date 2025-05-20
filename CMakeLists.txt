@@ -4,6 +4,7 @@ project(libarchive-js VERSION 0.0.1 LANGUAGES ASM C CXX)
 include(GNUInstallDirs)
 
 find_package(ZLIB REQUIRED)
+find_package(BZip2 REQUIRED)
 find_package(LibArchive REQUIRED)
 
 set(libarchive_SOURCES
@@ -17,6 +18,7 @@ set(libarchive_INCLUDES
 
 set(libarchive_LIBRARIES
   ZLIB::ZLIB
+  BZip2::BZip2
   LibArchive::LibArchive
   )
 
