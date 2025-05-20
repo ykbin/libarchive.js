@@ -1,3 +1,8 @@
+// RUN npm install
+// RUN npx bitmake build
+// RUN npm run build:typo
+// RUN npm run build:release
+
 export default {
   "default": {
     environment: {
@@ -53,6 +58,39 @@ export default {
       ],
     },
     destDir: "${binaryRoot}/sysroot",
+  },
+
+  "bundle:bzip2": {
+    base: "default",
+    sourceUrl: "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+    action: [
+      {
+        action: "process",
+        command: "make",
+        args: [
+          "CC=clang",
+          "LD=wasm-ld",
+          "AR=llvm-ar",
+          "STRIP=llvm-strip",
+          'CFLAGS=--target=wasm32 -matomics -mmultivalue -mbulk-memory -rtlib=libgcc -O3 --sysroot="${binaryRoot}/sysroot/usr"',
+          "LDFLAGS=-Wl,--export-dynamic -Wl,--import-memory -Wl,--stack-first -z stack-size=131072 -rtlib=libgcc",
+          "PREFIX=/usr",
+          "VERBOSE=1",
+          "bzip2",
+          "bzip2recover",
+        ],
+      },
+      {
+        action: "process",
+        command: "make",
+        args: [
+          "install",
+          'PREFIX="${binaryRoot}/sysroot/usr"',
+          "VERBOSE=1",
+        ],
+      },
+    ],
+    binaryDir: "${sourceDir}",
   },
 
   "bundle:libarchive": {

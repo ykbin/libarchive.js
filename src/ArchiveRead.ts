@@ -9,7 +9,7 @@
 
 import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveCloseCallback, ArchiveRead, ARCHIVE_OK } from "./Archive";
 import { ArchiveNative } from "./ArchiveNative";
-import { utf8DataToString } from "./Utils";
+import { utf8DataToString, errorCodeToString } from "./Utils";
 
 export interface ArchiveReadClient {
   opener: ArchiveOpenCallback | null,
@@ -60,7 +60,7 @@ export class ArchiveReadImpl implements ArchiveRead {
     this._client.closer = closer;
     const code = this._native.archive_read_open(this._handle);
     if (code !== ARCHIVE_OK)
-      throw new Error(this.errorString, { cause: { code, errno: this.errno } });
+      throw new Error(this.errorString, { cause: errorCodeToString(code) });
   }
   
   public close(): number {
@@ -82,7 +82,7 @@ export class ArchiveReadImpl implements ArchiveRead {
       return new Uint8Array;
     }
 
-    throw new Error(this.errorString, { cause: { code: length, errno: this.errno } });
+    throw new Error(this.errorString, { cause: errorCodeToString(length) });
   }
 
   public dataSkip(): number {
