@@ -20,6 +20,11 @@ export interface ArchiveNative extends WebAssembly.Exports {
   archive_read_free(handle: number): void;
   archive_read_support_filter_all(handle: number): void;
   archive_read_support_format_all(handle: number): void;
+  
+  archive_read_allow_open_callback(handle: number): void;
+  archive_read_allow_read_callback(handle: number): void;
+  archive_read_allow_close_callback(handle: number): void;
+
   archive_read_open(handle: number): number;
   archive_read_close(handle: number): number;
   archive_read_next_header(handle: number): number;

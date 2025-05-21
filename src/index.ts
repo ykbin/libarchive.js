@@ -38,10 +38,6 @@ async function newArchiveContext(params?: string | Buffer): Promise<ArchiveConte
   else {
     throw Error(`Not supported parameter ${params}`);
   }
-  
-  if (!g_context) {
-    g_context = context;
-  }
 
   return context;
 }
@@ -75,24 +71,22 @@ const libarchive = Object.assign(newArchiveContext, {
     archive.supportFormatAll();
 
     const chunks = [ await fs.promises.readFile(input) ];
+    archive.onread = () => chunks.shift();
 
-    archive.open(null, () => chunks.shift(), null);
+    archive.open();
 
     const outputDir = path.resolve(output || "");
     const pathSep = PathSep.fromPath(outputDir);
     const mkdirCache = new MkdirCache;
 
-    for (;;) {
-      let ret = archive.nextHeader();
-      if (ret !== 0) {
-        break;
-      }
-
+    while (archive.nextHeader()) {
       const pathname = archive.entryPathname();
       if (pathname === null) {
         archive.dataSkip();
         continue;
       }
+      
+      console.log("x", pathname);
 
       const filepath = pathSep.representPath(pathname);
       const fullpath = path.join(outputDir, filepath);
@@ -100,11 +94,9 @@ const libarchive = Object.assign(newArchiveContext, {
       let size = 0;
       const filetype = archive.entryFiletype();
       if (filetype === libarchive.AE_IFDIR) {
-        console.log("d", filepath + pathSep.sep);
         await mkdirCache.mkdir(fullpath);
       }
       else if (filetype === libarchive.AE_IFREG) {
-        console.log("f", filepath);
         const fileDir = path.dirname(fullpath);
         await mkdirCache.mkdir(fileDir);
         const fileHandle = await fs.promises.open(fullpath, "w");
@@ -116,7 +108,7 @@ const libarchive = Object.assign(newArchiveContext, {
         }
         await fileHandle.close();
         if (archive.dataRead().length != 0) {
-          console.warn(`${filepath} file has wrong data size (${size})`);
+          console.warn(`${pathname} file has wrong data size (${size})`);
         }
         continue;
       }
