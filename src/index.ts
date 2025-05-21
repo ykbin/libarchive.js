@@ -14,12 +14,7 @@ import { ArchiveContextImpl } from "./ArchiveContext";
 import { ArchiveContext } from "./Archive";
 import { ARCHIVE_EOF, ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL } from "./Archive";
 import { AE_IFMT, AE_IFREG, AE_IFLNK, AE_IFSOCK, AE_IFCHR, AE_IFBLK, AE_IFDIR, AE_IFIFO } from "./Archive";
-
-function getScriptDirectory() {
-  if (typeof __dirname !== 'undefined')
-    return eval("__dirname");
-  return null;
-}
+import { PathSep, MkdirCache, getScriptDirectory } from "./FileSystem";
 
 let g_context: ArchiveContext;
 async function newArchiveContext(params?: string | Buffer): Promise<ArchiveContext> {
@@ -73,7 +68,6 @@ const libarchive = Object.assign(newArchiveContext, {
   },
 
   async decompress(input: string, output?: string, options?: any): Promise<void> {
-
     const context = await newArchiveContext();
     const archive = context.newRead();
 
@@ -85,7 +79,8 @@ const libarchive = Object.assign(newArchiveContext, {
     archive.open(null, () => chunks.shift(), null);
 
     const outputDir = path.resolve(output || "");
-    await fs.promises.mkdir(outputDir, { recursive: true });
+    const pathSep = PathSep.fromPath(outputDir);
+    const mkdirCache = new MkdirCache;
 
     for (;;) {
       let ret = archive.nextHeader();
@@ -99,16 +94,19 @@ const libarchive = Object.assign(newArchiveContext, {
         continue;
       }
 
-      const fullpath = path.join(outputDir, pathname);
+      const filepath = pathSep.representPath(pathname);
+      const fullpath = path.join(outputDir, filepath);
 
       let size = 0;
       const filetype = archive.entryFiletype();
       if (filetype === libarchive.AE_IFDIR) {
-        console.log("d", pathname);
-        await fs.promises.mkdir(fullpath, { recursive: true });
+        console.log("d", filepath + pathSep.sep);
+        await mkdirCache.mkdir(fullpath);
       }
       else if (filetype === libarchive.AE_IFREG) {
-        console.log("f", pathname);
+        console.log("f", filepath);
+        const fileDir = path.dirname(fullpath);
+        await mkdirCache.mkdir(fileDir);
         const fileHandle = await fs.promises.open(fullpath, "w");
         size = archive.entrySize();
         while (size > 0) {
@@ -118,7 +116,7 @@ const libarchive = Object.assign(newArchiveContext, {
         }
         await fileHandle.close();
         if (archive.dataRead().length != 0) {
-          console.warn(`${pathname} file has wrong data size (${size})`);
+          console.warn(`${filepath} file has wrong data size (${size})`);
         }
         continue;
       }
