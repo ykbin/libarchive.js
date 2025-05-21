@@ -17,8 +17,8 @@
 struct archive_read_wrapper {
   struct archive* impl;
   struct archive_entry* entry;
-  uint8_t inputBuffer[4092];
-  uint8_t outputBuffer[512];
+  uint8_t inputBuffer[10240];
+  uint8_t outputBuffer[4092];
 };
 
 __ATTR_IMPORT_NAME("env", "archive_open_handler")
@@ -99,11 +99,23 @@ static int archive_on_open(struct archive* impl, void* userdata)
   return __archive_open_handler(arch);
 }
 
+__ATTR_EXPORT_NAME("archive_read_allow_open_callback")
+void __archive_read_allow_open_callback(struct archive_read_wrapper* arch)
+{
+  archive_read_set_open_callback(arch->impl, &archive_on_open);
+}
+
 static la_ssize_t	archive_on_read(struct archive* impl, void* userdata, const void** _buffer)
 {
   struct archive_read_wrapper* arch = reinterpret_cast<struct archive_read_wrapper*>(userdata);
   *_buffer = arch->inputBuffer;
   return __archive_read_handler(arch, arch->inputBuffer, sizeof(arch->inputBuffer));
+}
+
+__ATTR_EXPORT_NAME("archive_read_allow_read_callback")
+void __archive_read_allow_read_callback(struct archive_read_wrapper* arch)
+{
+  archive_read_set_read_callback(arch->impl, &archive_on_read);
 }
 
 static int archive_on_close(struct archive* impl, void* userdata)
@@ -112,10 +124,17 @@ static int archive_on_close(struct archive* impl, void* userdata)
   return __archive_close_handler(arch);
 }
 
-__ATTR_EXPORT_NAME("archive_read_open")
-int __archive_read_open(struct archive_read_wrapper* arch, unsigned open_id, unsigned read_id, unsigned close_id)
+__ATTR_EXPORT_NAME("archive_read_allow_close_callback")
+void __archive_read_allow_close_callback(struct archive_read_wrapper* arch)
 {
-  return archive_read_open(arch->impl, arch, &archive_on_open, &archive_on_read, &archive_on_close);
+  archive_read_set_close_callback(arch->impl, &archive_on_close);
+}
+
+__ATTR_EXPORT_NAME("archive_read_open")
+int __archive_read_open(struct archive_read_wrapper* arch)
+{
+	archive_read_set_callback_data(arch->impl, arch);
+  return archive_read_open1(arch->impl);
 }
 
 __ATTR_EXPORT_NAME("archive_read_close")

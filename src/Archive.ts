@@ -31,9 +31,14 @@ export interface ArchiveRead {
   release(): void;
   supportFilterAll(): void;
   supportFormatAll(): void;
-  open(opener: ArchiveOpenCallback | null, reader: ArchiveReadCallback, closer: ArchiveCloseCallback | null): void;
+
+  set onopen(callback: ArchiveOpenCallback);
+  set onread(callback: ArchiveReadCallback);
+  set onclose(callback: ArchiveCloseCallback);
+
+  open(): void;
   close(): number;
-  nextHeader(): number;
+  nextHeader(): boolean;
   dataRead(): Uint8Array;
   dataSkip(): number;
 

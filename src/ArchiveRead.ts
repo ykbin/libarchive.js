@@ -7,7 +7,7 @@
  * under the MIT License. See LICENSE file for details.
  */
 
-import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveCloseCallback, ArchiveRead, ARCHIVE_OK } from "./Archive";
+import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveCloseCallback, ArchiveRead, ARCHIVE_OK, ARCHIVE_EOF } from "./Archive";
 import { ArchiveNative } from "./ArchiveNative";
 import { utf8DataToString, errorCodeToString } from "./Utils";
 
@@ -54,21 +54,24 @@ export class ArchiveReadImpl implements ArchiveRead {
     return this._native.archive_read_support_format_all(this._handle);
   }
 
-  public open(opener: ArchiveOpenCallback | null, reader: ArchiveReadCallback, closer: ArchiveCloseCallback | null): void {
-    this._client.opener = opener;
-    this._client.reader = reader;
-    this._client.closer = closer;
+  public open(): void {
     const code = this._native.archive_read_open(this._handle);
     if (code !== ARCHIVE_OK)
       throw new Error(this.errorString, { cause: errorCodeToString(code) });
   }
-  
+
   public close(): number {
     return this._native.archive_read_close(this._handle);
   }
 
-  public nextHeader(): number {
-    return this._native.archive_read_next_header(this._handle);
+  public nextHeader(): boolean {
+    const code = this._native.archive_read_next_header(this._handle);
+    if (code === ARCHIVE_OK)
+      return true;
+    if (code === ARCHIVE_EOF)
+      return false;
+
+    throw new Error(this.errorString, { cause: errorCodeToString(code) });
   }
 
   public dataRead(): Uint8Array {
@@ -111,6 +114,21 @@ export class ArchiveReadImpl implements ArchiveRead {
     const lo = this._native.archive_entry_size_lo(this._handle);
     const hi = this._native.archive_entry_size_hi(this._handle);
     return hi * 4294967296 + lo;
+  }
+
+  public set onopen(callback: ArchiveOpenCallback) {
+    this._client.opener = callback;
+    this._native.archive_read_allow_open_callback(this._handle);
+  }
+
+  public set onread(callback: ArchiveReadCallback) {
+    this._client.reader = callback;
+    this._native.archive_read_allow_read_callback(this._handle);
+  }
+
+  public set onclose(callback: ArchiveCloseCallback) {
+    this._client.closer = callback;
+    this._native.archive_read_allow_close_callback(this._handle);
   }
 
   // handleEvent
