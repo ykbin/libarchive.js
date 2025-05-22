@@ -7,7 +7,6 @@
  * under the MIT License. See LICENSE file for details.
  */
 
-export const ARCHIVE_EOF = 1;
 export const ARCHIVE_OK = 0;
 export const ARCHIVE_RETRY = -10;
 export const ARCHIVE_WARN = -20;
@@ -25,10 +24,20 @@ export const AE_IFIFO  = 0x1000;
 
 export type ArchiveOpenCallback = () => number;
 export type ArchiveReadCallback = () => Buffer | undefined;
+export type ArchiveWriteCallback = (bytes: Uint8Array) => void;
 export type ArchiveCloseCallback = () => number;
 
-export interface ArchiveRead {
+export interface IArchiveEntry {
   release(): void;
+
+  get pathname(): string | undefined;
+  get filetype(): number;
+  get size(): number;
+};
+
+export interface IArchiveRead {
+  release(): void;
+
   supportFilterAll(): void;
   supportFormatAll(): void;
 
@@ -38,15 +47,25 @@ export interface ArchiveRead {
 
   open(): void;
   close(): number;
-  nextHeader(): boolean;
+  nextHeader(): IArchiveEntry | undefined;
   dataRead(): Uint8Array;
   dataSkip(): number;
-
-  entryPathname(): string | null;
-  entryFiletype(): number;
-  entrySize(): number;
 };
 
-export interface ArchiveContext {
-  newRead(): ArchiveRead;
+export interface IArchiveWrite {
+  release(): void;
+
+  setFormatZip(): number;
+
+  set onopen(callback: ArchiveOpenCallback);
+  set onwrite(callback: ArchiveWriteCallback);
+  set onclose(callback: ArchiveCloseCallback);
+
+  open(): void;
+};
+
+export interface IArchiveContext {
+  newEntry(): IArchiveEntry;
+  newRead(): IArchiveRead;
+  newWrite(): IArchiveWrite;
 };

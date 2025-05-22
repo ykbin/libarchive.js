@@ -7,6 +7,8 @@
  * under the MIT License. See LICENSE file for details.
  */
 
+export type ArchiveEntryHandle = number;
+
 export interface ArchiveNative extends WebAssembly.Exports {
   readonly memory: WebAssembly.Memory;
 
@@ -20,20 +22,25 @@ export interface ArchiveNative extends WebAssembly.Exports {
   archive_read_free(handle: number): void;
   archive_read_support_filter_all(handle: number): void;
   archive_read_support_format_all(handle: number): void;
-  
-  archive_read_allow_open_callback(handle: number): void;
-  archive_read_allow_read_callback(handle: number): void;
-  archive_read_allow_close_callback(handle: number): void;
 
   archive_read_open(handle: number): number;
   archive_read_close(handle: number): number;
-  archive_read_next_header(handle: number): number;
+  archive_read_next_header(handle: number): ArchiveEntryHandle;
+  archive_read_last_error(handle: number): number;
   archive_read_data(handle: number): number;
   archive_read_data_offset(handle: number): number;
   archive_read_data_skip(handle: number): number;
 
-  archive_entry_pathname_w(handle: number): number;
-  archive_entry_filetype(handle: number): number;
-  archive_entry_size_lo(handle: number): number;
-  archive_entry_size_hi(handle: number): number;
+  archive_write_new(): number;
+  archive_write_free(handle: number): void;
+  archive_write_set_format_zip(handle: number): number;
+  archive_write_open(handle: number): number;
+  archive_write_header(handle: number, entry: ArchiveEntryHandle): number;
+
+  archive_entry_new(): ArchiveEntryHandle;
+  archive_entry_free(handle: ArchiveEntryHandle): void;
+  archive_entry_pathname_w(handle: ArchiveEntryHandle): number;
+  archive_entry_filetype(handle: ArchiveEntryHandle): number;
+  archive_entry_size_lo(handle: ArchiveEntryHandle): number;
+  archive_entry_size_hi(handle: ArchiveEntryHandle): number;
 };

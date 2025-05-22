@@ -10,19 +10,19 @@
 import path from "node:path";
 import fs from "node:fs";
 
-import { ArchiveContextImpl } from "./ArchiveContext";
-import { ArchiveContext } from "./Archive";
-import { ARCHIVE_EOF, ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL } from "./Archive";
+import { IArchiveContext } from "./Archive";
+import { ArchiveContext } from "./ArchiveContext";
+import { ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL } from "./Archive";
 import { AE_IFMT, AE_IFREG, AE_IFLNK, AE_IFSOCK, AE_IFCHR, AE_IFBLK, AE_IFDIR, AE_IFIFO } from "./Archive";
 import { PathSep, MkdirCache, getScriptDirectory } from "./FileSystem";
 
 let g_context: ArchiveContext;
-async function newArchiveContext(params?: string | Buffer): Promise<ArchiveContext> {
+async function newArchiveContext(params?: string | Buffer): Promise<IArchiveContext> {
   if (params === undefined) {
     if (!g_context) {
       const filename = path.join(getScriptDirectory(), "libarchive.wasm");
       const buffer = await fs.promises.readFile(filename);
-      g_context = await ArchiveContextImpl.instantiate(buffer);
+      g_context = await ArchiveContext.instantiate(buffer);
     }
     return g_context;
   }
@@ -30,10 +30,10 @@ async function newArchiveContext(params?: string | Buffer): Promise<ArchiveConte
   let context: ArchiveContext;
   if (typeof params === "string") {
     const buffer = await fs.promises.readFile(params);
-    context = await ArchiveContextImpl.instantiate(buffer);
+    context = await ArchiveContext.instantiate(buffer);
   }
   else if (params instanceof Buffer) {
-    context = await ArchiveContextImpl.instantiate(params);
+    context = await ArchiveContext.instantiate(params);
   }
   else {
     throw Error(`Not supported parameter ${params}`);
@@ -42,8 +42,15 @@ async function newArchiveContext(params?: string | Buffer): Promise<ArchiveConte
   return context;
 }
 
+type DecompressOptions = {
+  verbose?: boolean;
+};
+
+type CompressOptions = {
+  verbose?: boolean;
+};
+
 const libarchive = Object.assign(newArchiveContext, {
-  ARCHIVE_EOF,
   ARCHIVE_OK,
   ARCHIVE_RETRY,
   ARCHIVE_WARN,
@@ -63,9 +70,13 @@ const libarchive = Object.assign(newArchiveContext, {
     return (await newArchiveContext()).newRead();
   },
 
-  async decompress(input: string, output?: string, options?: any): Promise<void> {
-    const context = await newArchiveContext();
-    const archive = context.newRead();
+  async newWrite() {
+    return (await newArchiveContext()).newWrite();
+  },
+
+  async decompress(input: string, output?: string, options?: DecompressOptions): Promise<void> {
+    const verbose = options && options.verbose;
+    const archive = await libarchive.newRead();
 
     archive.supportFilterAll();
     archive.supportFormatAll();
@@ -79,20 +90,27 @@ const libarchive = Object.assign(newArchiveContext, {
     const pathSep = PathSep.fromPath(outputDir);
     const mkdirCache = new MkdirCache;
 
-    while (archive.nextHeader()) {
-      const pathname = archive.entryPathname();
-      if (pathname === null) {
+    for (;;) {
+      const entry = archive.nextHeader();
+      if(!entry) {
+        break;
+      }
+
+      const pathname = entry.pathname;
+      if (!pathname) {
         archive.dataSkip();
         continue;
       }
-      
-      console.log("x", pathname);
+
+      if (verbose) {
+        console.log("x", pathname);
+      }
 
       const filepath = pathSep.representPath(pathname);
       const fullpath = path.join(outputDir, filepath);
 
       let size = 0;
-      const filetype = archive.entryFiletype();
+      const filetype = entry.filetype;
       if (filetype === libarchive.AE_IFDIR) {
         await mkdirCache.mkdir(fullpath);
       }
@@ -100,7 +118,7 @@ const libarchive = Object.assign(newArchiveContext, {
         const fileDir = path.dirname(fullpath);
         await mkdirCache.mkdir(fileDir);
         const fileHandle = await fs.promises.open(fullpath, "w");
-        size = archive.entrySize();
+        size = entry.size;
         while (size > 0) {
           const bytes = archive.dataRead();
           await fileHandle.write(bytes);
@@ -118,6 +136,26 @@ const libarchive = Object.assign(newArchiveContext, {
     }
 
     archive.close();
+    archive.release();
+  },
+
+
+  async compress(input: string | string[], output: string, options?: CompressOptions) {
+    // type: "zip" | "gzip" | "tar" | "tgz",
+    const files = [ input ].flat();
+    const verbose = options && options.verbose;
+    const context = await newArchiveContext();
+    const archive = context.newWrite();
+
+    archive.setFormatZip();
+
+    archive.open();
+    for (const file of files) {
+      const entry = context.newEntry();
+
+      entry.release();
+    }
+
     archive.release();
   },
 });
