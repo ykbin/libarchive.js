@@ -27,11 +27,21 @@ export type ArchiveReadCallback = () => Buffer | undefined;
 export type ArchiveWriteCallback = (bytes: Uint8Array) => void;
 export type ArchiveCloseCallback = () => number;
 
+export interface IArchiveBuffer {
+  release(): void;
+
+  dataView(): DataView;
+};
+
 export interface IArchiveEntry {
   release(): void;
 
   get pathname(): string | undefined;
+  set pathname(value: string);
+
   get filetype(): number;
+  set filetype(filetype: number);
+
   get size(): number;
 };
 
@@ -46,7 +56,7 @@ export interface IArchiveRead {
   set onclose(callback: ArchiveCloseCallback);
 
   open(): void;
-  close(): number;
+  close(): void;
   nextHeader(): IArchiveEntry | undefined;
   dataRead(): Uint8Array;
   dataSkip(): number;
@@ -62,10 +72,14 @@ export interface IArchiveWrite {
   set onclose(callback: ArchiveCloseCallback);
 
   open(): void;
+  close(): void;
+  writeHeader(entry: IArchiveEntry): number;
+  writeData(buffer: DataView, offset?: number, length?: number): number;
 };
 
-export interface IArchiveContext {
-  newEntry(): IArchiveEntry;
+export interface IArchive {
   newRead(): IArchiveRead;
   newWrite(): IArchiveWrite;
+  newEntry(): IArchiveEntry;
+  newBuffer(length: number): IArchiveBuffer;
 };

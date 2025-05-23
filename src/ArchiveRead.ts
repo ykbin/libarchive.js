@@ -28,14 +28,6 @@ export class ArchiveRead implements IArchiveRead {
     return this._handle;
   }
 
-  public get errno(): number {
-    return this._context.archive_errno(this._handle);
-  }
-
-  public get errorString() {
-    return this._context.archive_error_string(this._handle);
-  }
-
   public supportFilterAll(): void {
     return this._context.archive_read_support_filter_all(this._handle);
   }
@@ -48,8 +40,8 @@ export class ArchiveRead implements IArchiveRead {
     this._context.archive_read_open(this._handle);
   }
 
-  public close(): number {
-    return this._context.archive_read_close(this._handle);
+  public close(): void {
+    this._context.archive_read_close(this._handle);
   }
 
   public nextHeader(): ArchiveEntry | undefined {

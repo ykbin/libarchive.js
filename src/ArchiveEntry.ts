@@ -9,34 +9,43 @@
 
 import { IArchiveEntry } from "./Archive";
 import { ArchiveContext } from "./ArchiveContext";
-import { ArchiveEntryHandle } from "./ArchiveNative";
+import { ArchiveEntryPtr } from "./ArchiveNative";
 
 export class ArchiveEntry implements IArchiveEntry {
   private _context: ArchiveContext;
-  private _handle: ArchiveEntryHandle;
+  private _pointer: ArchiveEntryPtr;
 
-  public constructor(context: ArchiveContext, handle: ArchiveEntryHandle) {
+  public constructor(context: ArchiveContext, pointer: ArchiveEntryPtr) {
     this._context = context;
-    this._handle = handle;
+    this._pointer = pointer;
   }
 
   public release(): void {
-    this._context.archive_entry_free(this._handle);
+    this._context.archive_entry_free(this._pointer);
   }
 
-  public get handle() {
-    return this._handle;
+  public get pointer() {
+    return this._pointer;
   }
 
   public get pathname(): string | undefined {
-    return this._context.archive_entry_pathname(this._handle);
+    return this._context.archive_entry_pathname(this._pointer);
+  }
+
+  public set pathname(value: string) {
+    if (!this._context.archive_entry_set_pathname(this._pointer, value))
+      throw new Error("No Memory");
   }
 
   public get filetype(): number {
-    return this._context.archive_entry_filetype(this._handle);
+    return this._context.archive_entry_filetype(this._pointer);
+  }
+
+  public set filetype(filetype: number) {
+    this._context.archive_entry_set_filetype(this._pointer, filetype);
   }
 
   public get size(): number {
-    return this._context.archive_entry_size(this._handle);
+    return this._context.archive_entry_size(this._pointer);
   }
 };

@@ -10,6 +10,7 @@
 import { IArchiveWrite, ArchiveOpenCallback, ArchiveWriteCallback, ArchiveCloseCallback } from "./Archive";
 import { ArchiveContext } from "./ArchiveContext";
 import { ArchiveEntry } from "./ArchiveEntry";
+import { ArchiveBuffer } from "./ArchiveBuffer";
 
 export class ArchiveWrite implements IArchiveWrite {
   private _context: ArchiveContext;
@@ -26,14 +27,6 @@ export class ArchiveWrite implements IArchiveWrite {
 
   public get handle() {
     return this._handle;
-  }
-
-  public get errno(): number {
-    return this._context.archive_errno(this._handle);
-  }
-
-  public get errorString() {
-    return this._context.archive_error_string(this._handle);
   }
 
   public setFormatZip(): number {
@@ -56,7 +49,17 @@ export class ArchiveWrite implements IArchiveWrite {
     this._context.archive_write_open(this._handle);
   }
 
+  public close(): void {
+    this._context.archive_write_close(this._handle);
+  }
+
   public writeHeader(entry: ArchiveEntry): number {
-    return this._context.archive_write_header(this._handle, entry.handle);
+    return this._context.archive_write_header(this._handle, entry.pointer);
+  }
+
+  public writeData(buffer: DataView, offset?: number, length?: number): number {
+    offset = offset || 0;
+    length = length || buffer.byteLength - offset;
+    return this._context.archive_write_data(this._handle, buffer.byteOffset + offset, length);
   }
 };
