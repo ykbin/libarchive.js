@@ -16,18 +16,16 @@
 
 struct archive_base_wrapper {
   struct archive* archive;
-  int last_error;
 };
 
 struct archive_read_wrapper {
   struct archive_base_wrapper base;
-  uint8_t inputBuffer[10240];
-  uint8_t outputBuffer[4092];
+  int last_error;
+  uint8_t buffer[10240];
 };
 
 struct archive_write_wrapper {
   struct archive_base_wrapper base;
-  uint8_t buffer[8192];
 };
 
 __ATTR_IMPORT_NAME("env", "archive_open_handler")
@@ -81,7 +79,7 @@ struct archive_read_wrapper* __archive_read_new(void)
     return nullptr;
   }
 
-  arch->base.last_error = ARCHIVE_OK;
+  arch->last_error = ARCHIVE_OK;
   return arch;
 }
 
@@ -113,8 +111,8 @@ static int archive_on_open(struct archive* a, void* userdata)
 static la_ssize_t	archive_on_read(struct archive* a, void* userdata, const void** buffer)
 {
   auto arch = reinterpret_cast<struct archive_read_wrapper*>(userdata);
-  *buffer = arch->inputBuffer;
-  return __archive_read_handler(&arch->base, arch->inputBuffer, sizeof(arch->inputBuffer));
+  *buffer = arch->buffer;
+  return __archive_read_handler(&arch->base, arch->buffer, sizeof(arch->buffer));
 }
 
 static la_ssize_t	archive_on_write(struct archive* a, void* userdata, const void* buffer, size_t length)
@@ -145,30 +143,24 @@ __ATTR_EXPORT_NAME("archive_read_next_header")
 struct archive_entry* __archive_read_next_header(struct archive_read_wrapper* arch)
 {
   struct archive_entry* entry;
-  arch->base.last_error = archive_read_next_header(arch->base.archive, &entry);
-  if (arch->base.last_error == ARCHIVE_OK)
+  arch->last_error = archive_read_next_header(arch->base.archive, &entry);
+  if (arch->last_error == ARCHIVE_OK)
     return entry;
-  if (arch->base.last_error == ARCHIVE_EOF)
-    arch->base.last_error = ARCHIVE_OK;
+  if (arch->last_error == ARCHIVE_EOF)
+    arch->last_error = ARCHIVE_OK;
   return nullptr;
 }
 
 __ATTR_EXPORT_NAME("archive_read_last_error")
 int __archive_read_last_error(struct archive_read_wrapper* arch)
 {
-  return arch->base.last_error;
+  return arch->last_error;
 }
 
 __ATTR_EXPORT_NAME("archive_read_data")
-int __archive_read_data(struct archive_read_wrapper* arch)
+int __archive_read_data(struct archive_read_wrapper* arch, void* buffer, unsigned size)
 {
-  return archive_read_data(arch->base.archive, arch->outputBuffer, sizeof(arch->outputBuffer));
-}
-
-__ATTR_EXPORT_NAME("archive_read_data_offset")
-const uint8_t* __archive_read_data_offset(struct archive_read_wrapper* arch)
-{
-  return arch->outputBuffer;
+  return archive_read_data(arch->base.archive, buffer, size);
 }
 
 __ATTR_EXPORT_NAME("archive_read_data_skip")
@@ -190,7 +182,6 @@ struct archive_write_wrapper* __archive_write_new(void)
     return nullptr;
   }
 
-  arch->base.last_error = ARCHIVE_OK;
   return arch;
 }
 
@@ -201,10 +192,22 @@ void __archive_write_free(struct archive_write_wrapper* arch)
   free(arch);
 }
 
-__ATTR_EXPORT_NAME("archive_write_set_format_zip")
-int __archive_write_set_format_zip(struct archive_write_wrapper* arch)
+__ATTR_EXPORT_NAME("archive_write_set_format_by_name")
+int __archive_write_set_format_by_name(struct archive_write_wrapper* arch, const char* name)
 {
-  return archive_write_set_format_zip(arch->base.archive);
+  return archive_write_set_format_by_name(arch->base.archive, name);
+}
+
+__ATTR_EXPORT_NAME("archive_write_add_filter_by_name")
+int __archive_write_add_filter_by_name(struct archive_write_wrapper* arch, const char* name)
+{
+  return archive_write_add_filter_by_name(arch->base.archive, name);
+}
+
+__ATTR_EXPORT_NAME("archive_write_set_format_filter_by_ext")
+int __archive_write_set_format_filter_by_ext(struct archive_write_wrapper* arch, const char* filename)
+{
+  return archive_write_set_format_filter_by_ext_def(arch->base.archive, filename, ".zip");
 }
 
 __ATTR_EXPORT_NAME("archive_write_open")
@@ -226,7 +229,7 @@ int __archive_write_header(struct archive_write_wrapper* arch, struct archive_en
 }
 
 __ATTR_EXPORT_NAME("archive_write_data")
-int __archive_write_data(struct archive_write_wrapper* arch, void* buffer, unsigned size)
+int __archive_write_data(struct archive_write_wrapper* arch, const void* buffer, unsigned size)
 {
   return static_cast<int>(archive_write_data(arch->base.archive, buffer, size));
 }
@@ -277,6 +280,12 @@ __ATTR_EXPORT_NAME("archive_entry_size_hi")
 unsigned __archive_entry_size_hi(struct archive_entry* entry)
 {
   return archive_entry_size(entry) >> 32;
+}
+
+__ATTR_EXPORT_NAME("archive_entry_set_size")
+void __archive_entry_set_size(struct archive_entry* entry, unsigned hi, unsigned lo)
+{
+  archive_entry_set_size(entry, static_cast<la_int64_t>(hi) << 32 | lo);
 }
 
 __ATTR_EXPORT_NAME("archive_entry_set_pathname_utf8")

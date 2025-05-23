@@ -15,11 +15,7 @@
   },
   "files": [
     "dist",
-    "LICENSE",
-    "licenses/libarchive.COPYING",
-    "licenses/libbz2.LICENSE",
-    "licenses/lz4.LICENSE",
-    "licenses/zlib.LICENSE"
+    "LICENSE"
   ],
   "keywords": [
     "archive",

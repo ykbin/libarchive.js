@@ -10,7 +10,7 @@
 import path from "node:path";
 import fs from "node:fs";
 
-import { IArchive } from "./Archive";
+import { IArchive, IArchiveBuffer } from "./Archive";
 import { Archive } from "./ArchiveImpl";
 import { ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL } from "./Archive";
 import { AE_IFMT, AE_IFREG, AE_IFLNK, AE_IFSOCK, AE_IFCHR, AE_IFBLK, AE_IFDIR, AE_IFIFO } from "./Archive";
@@ -79,7 +79,7 @@ const libarchive = Object.assign(newArchiveContext, {
     archive.onread = () => chunks.shift();
     archive.open();
 
-    // const buffer = context.newBuffer(4092);
+    const buffer = context.newBuffer(4092);
 
     const outputDir = path.resolve(output ? PathSep.representPathAsNative(output) : "");
     const mkdirCache = new MkdirCache;
@@ -113,12 +113,16 @@ const libarchive = Object.assign(newArchiveContext, {
         const fileHandle = await fs.promises.open(filepath, "w");
         size = entry.size;
         while (size > 0) {
-          const bytes = archive.dataRead();
-          await fileHandle.write(bytes);
-          size -= bytes.length;
+          let n = archive.dataRead(buffer);
+          while (n) {
+            const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, n);
+            const { bytesWritten } = await fileHandle.write(bytes);
+            n -= bytesWritten;
+            size -= bytesWritten;
+          }
         }
         await fileHandle.close();
-        if (archive.dataRead().length != 0) {
+        if (archive.dataRead(buffer) != 0) {
           console.warn(`${pathname} file has wrong data size (${size})`);
         }
         continue;
@@ -128,29 +132,38 @@ const libarchive = Object.assign(newArchiveContext, {
         archive.dataSkip();
     }
 
-    // buffer.release();
+    buffer.release();
     archive.close();
     archive.release();
   },
 
 
   async compress(input: string | string[], output: string, options?: CompressOptions) {
-    // type: "zip" | "gzip" | "tar" | "tgz",
     const currentDirectory = options && options.directory || process.cwd();
     const fileEntries = await getFileStats([ input ].flat(), currentDirectory);
 
     const verbose = options && options.verbose;
     const context = await newArchiveContext();
+
     const archive = context.newWrite();
 
-    archive.setFormatZip();
+    archive.setFormatFilterByExt(output);
 
     const chunks = new Array<Buffer>;
-    archive.onwrite = (bytes: Uint8Array) => chunks.push(Buffer.from(bytes));
+    archive.onwrite = (buffer: IArchiveBuffer) => {
+      chunks.push(Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength));
+    }
     archive.open();
 
     const buffer = context.newBuffer(8192);
     const fd = await fs.promises.open(output, "w");
+    const flushChunks = async () => {
+      let bytes = chunks.shift();
+      while (bytes) {
+        await fd.write(bytes);
+        bytes = chunks.shift();
+      }
+    }
 
     for (const iter of fileEntries) {
       let filetype: number;
@@ -168,38 +181,34 @@ const libarchive = Object.assign(newArchiveContext, {
       const entry = context.newEntry();
       entry.pathname = iter.name;
       entry.filetype = filetype;
+
+      if (filetype == AE_IFREG) {
+        entry.size = iter.stat.size;
+      }
+
       archive.writeHeader(entry);
 
       if (filetype == AE_IFREG) {
         const fileHandle = await fs.promises.open(iter.filepath, "r");
         let size = iter.stat.size;
         while (size) {
-          const view = buffer.dataView();
-          const { bytesRead } = await fileHandle.read(view);
-          archive.writeData(view, 0, bytesRead);
+          const bytes = new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+          const { bytesRead } = await fileHandle.read(bytes);
+          archive.writeData(buffer, 0, bytesRead);
           size -= bytesRead;
         }
-        fileHandle.close();
+        await fileHandle.close();
       }
 
       entry.release();
 
-      let bytes = chunks.shift();
-      while (bytes) {
-        await fd.write(bytes);
-        bytes = chunks.shift();
-      }
+      await flushChunks();
     }
 
     buffer.release();
     archive.close();
 
-    let bytes = chunks.shift();
-    while (bytes) {
-      await fd.write(bytes);
-      bytes = chunks.shift();
-    }
-
+    await flushChunks();
     await fd.close();
 
     archive.release();

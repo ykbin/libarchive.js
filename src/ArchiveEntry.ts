@@ -41,11 +41,15 @@ export class ArchiveEntry implements IArchiveEntry {
     return this._context.archive_entry_filetype(this._pointer);
   }
 
-  public set filetype(filetype: number) {
-    this._context.archive_entry_set_filetype(this._pointer, filetype);
+  public set filetype(value: number) {
+    this._context.archive_entry_set_filetype(this._pointer, value);
   }
 
   public get size(): number {
     return this._context.archive_entry_size(this._pointer);
+  }
+
+  public set size(value: number) {
+    this._context.archive_entry_set_size(this._pointer, value);
   }
 };

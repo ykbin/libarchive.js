@@ -96,7 +96,7 @@ meta_ptr extend_heap(meta_ptr last, size_t size)
     old_break->size = size;
     old_break->free = 0;
     old_break->next = NULL;
-    old_break->prev = NULL;
+    old_break->prev = last;
     old_break->ptr = old_break->data;
     if (last)
     {

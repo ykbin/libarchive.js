@@ -7,9 +7,11 @@
  * under the MIT License. See LICENSE file for details.
  */
 
-import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveCloseCallback, IArchiveRead } from "./Archive";
+import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveCloseCallback, IArchiveRead, ARCHIVE_OK } from "./Archive";
 import { ArchiveContext } from "./ArchiveContext";
 import { ArchiveEntry } from "./ArchiveEntry";
+import { ArchiveBuffer } from "./ArchiveBuffer";
+import { errorCodeToString } from "./Utils";
 
 export class ArchiveRead implements IArchiveRead {
   private _context: ArchiveContext;
@@ -45,11 +47,30 @@ export class ArchiveRead implements IArchiveRead {
   }
 
   public nextHeader(): ArchiveEntry | undefined {
-    return this._context.archive_read_next_header(this._handle);
+    const entry = this._context.archive_read_next_header(this._handle);
+    if (entry)
+      return new ArchiveEntry(this._context, entry);
+
+    const code = this._context.archive_read_last_error(this._handle);
+    if (code === ARCHIVE_OK)
+      return;
+
+    const message = this._context.archive_error_string(this._handle);
+    const cause = errorCodeToString(code);
+    throw new Error(message, { cause });
   }
 
-  public dataRead(): Uint8Array {
-    return this._context.archive_read_data(this._handle);
+  public dataRead(buffer: ArchiveBuffer, offset?: number, length?: number): number {
+    offset = buffer.byteOffset + (offset || 0);
+    length = length || buffer.byteLength;
+
+    const n = this._context.archive_read_data(this._handle, offset, length);
+    if (n >= 0)
+      return n;
+
+    const message = this._context.archive_error_string(this._handle);
+    const cause = errorCodeToString(n);
+    throw new Error(message, { cause });
   }
 
   public dataSkip(): number {

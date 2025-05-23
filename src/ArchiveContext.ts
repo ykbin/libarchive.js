@@ -9,7 +9,7 @@
 
 import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveWriteCallback, ArchiveCloseCallback, ARCHIVE_OK } from "./Archive";
 import { ArchiveNative, ArchiveReadPtr, ArchiveWritePtr, ArchiveEntryPtr } from "./ArchiveNative";
-import { ArchiveEntry } from "./ArchiveEntry";
+import { ArchiveBuffer } from "./ArchiveBuffer";
 import { utf8DataToString, errorCodeToString } from "./Utils";
 
 type ArchiveReadCalbacks = {
@@ -106,10 +106,14 @@ export class ArchiveContext {
     return n;
   }
 
+  public archive_read_last_error(handle: number): number {
+    return this._native.archive_read_last_error(handle);
+  }
+
   public archive_write_handler(handle: number, offset: number, size: number): number {
     const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
     if (callbacks.writer)
-      callbacks.writer(new Uint8Array(this._memory.buffer, offset, size))
+      callbacks.writer(new ArchiveBuffer(this, offset, size))
     return size;
   };
 
@@ -157,27 +161,12 @@ export class ArchiveContext {
     return this._native.archive_read_close(handle);
   }
   
-  public archive_read_next_header(handle: number): ArchiveEntry | undefined {
-    const entryHandle = this._native.archive_read_next_header(handle);
-    if (entryHandle)
-      return new ArchiveEntry(this, entryHandle);
-    const code = this._native.archive_read_last_error(handle);
-    if (code !== ARCHIVE_OK)
-      this.archive_error_throw(handle, code);
+  public archive_read_next_header(handle: number): number {
+    return this._native.archive_read_next_header(handle);
   }
 
-  public archive_read_data(handle: number): Uint8Array {
-    const length = this._native.archive_read_data(handle);
-    if (length > 0) {
-      const offset = this._native.archive_read_data_offset(handle);
-      return new Uint8Array(this._memory.buffer, offset, length);
-    }
-
-    if (length == 0) {
-      return new Uint8Array;
-    }
-
-    this.archive_error_throw(handle, length);
+  public archive_read_data(handle: number, offset: number, size: number): number {
+    return this._native.archive_read_data(handle, offset, size);
   }
 
   public archive_read_data_skip(handle: number): number {
@@ -213,8 +202,16 @@ export class ArchiveContext {
     this._native.archive_write_free(handle);
   }
 
-  public archive_write_set_format_zip(handle: number): number {
-    return this._native.archive_write_set_format_zip(handle);
+  public archive_write_set_format_by_name(handle: number, name: number): number {
+    return this._native.archive_write_set_format_by_name(handle, name);
+  }
+
+  public archive_write_add_filter_by_name(handle: number, name: number): number {
+    return this._native.archive_write_add_filter_by_name(handle, name);
+  }
+
+  public archive_write_set_format_filter_by_ext(handle: number, filename: number): number {
+    return this._native.archive_write_set_format_filter_by_ext(handle, filename);
   }
 
   public archive_write_set_open_callback(handle: number, callback: ArchiveOpenCallback): void {
@@ -301,11 +298,24 @@ export class ArchiveContext {
     return hi * 4294967296 + lo;
   }
 
+  public archive_entry_set_size(entry: ArchiveEntryPtr, size: number): void {
+    this._native.archive_entry_set_size(entry, 0, size);
+  }
+
   public archive_buffer_new(size: number): number {
     return this._native.archive_buffer_new(size);
   }
 
   public archive_buffer_free(buffer: number): void {
     this._native.archive_buffer_free(buffer);
+  }
+
+  public archive_buffer_from(str: string): number {
+    const encoder = new TextEncoder;
+    const bytes = encoder.encode(str + "\x00");
+    const offset = this._native.archive_buffer_new(bytes.length);
+    if (offset)
+      (new Uint8Array(this._memory.buffer, offset, bytes.length)).set(bytes);
+    return offset;
   }
 };

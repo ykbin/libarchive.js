@@ -7,10 +7,11 @@
  * under the MIT License. See LICENSE file for details.
  */
 
-import { IArchiveWrite, ArchiveOpenCallback, ArchiveWriteCallback, ArchiveCloseCallback } from "./Archive";
+import { IArchiveWrite, ArchiveOpenCallback, ArchiveWriteCallback, ArchiveCloseCallback, ARCHIVE_OK } from "./Archive";
 import { ArchiveContext } from "./ArchiveContext";
 import { ArchiveEntry } from "./ArchiveEntry";
 import { ArchiveBuffer } from "./ArchiveBuffer";
+import { errorCodeToString } from "./Utils";
 
 export class ArchiveWrite implements IArchiveWrite {
   private _context: ArchiveContext;
@@ -29,8 +30,40 @@ export class ArchiveWrite implements IArchiveWrite {
     return this._handle;
   }
 
-  public setFormatZip(): number {
-    return this._context.archive_write_set_format_zip(this._handle);
+  public addFilter(filter: string): void {
+    const name = this._context.archive_buffer_from(filter);
+    if (!name) throw new Error("No Memory");
+    const code = this._context.archive_write_add_filter_by_name(this._handle, name);
+    this._context.archive_buffer_free(name);
+    if (code != ARCHIVE_OK) {
+      const message = this._context.archive_error_string(this._handle);
+      const cause = errorCodeToString(code);
+      throw new Error(message, { cause });
+    }
+  }
+
+  public set format(value: string) {
+    const name = this._context.archive_buffer_from(value);
+    if (!name) throw new Error("No Memory");
+    const code = this._context.archive_write_set_format_by_name(this._handle, name);
+    this._context.archive_buffer_free(name);
+    if (code != ARCHIVE_OK) {
+      const message = this._context.archive_error_string(this._handle);
+      const cause = errorCodeToString(code);
+      throw new Error(message, { cause });
+    }
+  }
+
+  public setFormatFilterByExt(filename: string): void {
+    const fname = this._context.archive_buffer_from(filename);
+    if (!fname) throw new Error("No Memory");
+    const code = this._context.archive_write_set_format_filter_by_ext(this._handle, fname);
+    this._context.archive_buffer_free(fname);
+    if (code != ARCHIVE_OK) {
+      const message = this._context.archive_error_string(this._handle);
+      const cause = errorCodeToString(code);
+      throw new Error(message, { cause });
+    }
   }
 
   public set onopen(callback: ArchiveOpenCallback) {
@@ -57,9 +90,16 @@ export class ArchiveWrite implements IArchiveWrite {
     return this._context.archive_write_header(this._handle, entry.pointer);
   }
 
-  public writeData(buffer: DataView, offset?: number, length?: number): number {
-    offset = offset || 0;
+  public writeData(buffer: ArchiveBuffer, offset?: number, length?: number): number {
+    offset = buffer.byteOffset + (offset || 0);
     length = length || buffer.byteLength - offset;
-    return this._context.archive_write_data(this._handle, buffer.byteOffset + offset, length);
+
+    const n = this._context.archive_write_data(this._handle, offset, length);
+    if (n >= 0)
+      return n;
+
+    const message = this._context.archive_error_string(this._handle);
+    const cause = errorCodeToString(n);
+    throw new Error(message, { cause });
   }
 };

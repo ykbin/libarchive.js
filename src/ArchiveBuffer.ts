@@ -12,28 +12,28 @@ import { ArchiveContext } from "./ArchiveContext";
 
 export class ArchiveBuffer implements IArchiveBuffer {
   private _context: ArchiveContext;
-  private _offset: number;
-  private _length: number;
+  private _byteOffset: number;
+  private _byteLength: number;
 
-  public constructor(context: ArchiveContext, offset: number, length: number) {
+  public constructor(context: ArchiveContext, byteOffset: number, byteLength: number) {
     this._context = context;
-    this._offset = offset;
-    this._length = length;
+    this._byteOffset = byteOffset;
+    this._byteLength = byteLength;
   }
 
   public release() {
-    this._context.archive_buffer_free(this._offset);
+    this._context.archive_buffer_free(this._byteOffset);
   }
 
-  dataView() {
-    return new DataView(this._context.memory.buffer, this._offset, this._length);
+  get buffer(): ArrayBuffer {
+    return this._context.memory.buffer;
   }
 
-  get offset() {
-    return this._offset;
+  get byteOffset(): number {
+    return this._byteOffset;
   }
 
-  get length(): number {
-    return this._length;
+  get byteLength(): number {
+    return this._byteLength;
   }
 };

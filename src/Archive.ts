@@ -24,13 +24,15 @@ export const AE_IFIFO  = 0x1000;
 
 export type ArchiveOpenCallback = () => number;
 export type ArchiveReadCallback = () => Buffer | undefined;
-export type ArchiveWriteCallback = (bytes: Uint8Array) => void;
+export type ArchiveWriteCallback = (buffer: IArchiveBuffer) => void;
 export type ArchiveCloseCallback = () => number;
 
 export interface IArchiveBuffer {
   release(): void;
 
-  dataView(): DataView;
+  get buffer(): ArrayBuffer;
+  get byteOffset(): number;
+  get byteLength(): number;
 };
 
 export interface IArchiveEntry {
@@ -43,6 +45,7 @@ export interface IArchiveEntry {
   set filetype(filetype: number);
 
   get size(): number;
+  set size(value: number);
 };
 
 export interface IArchiveRead {
@@ -58,14 +61,16 @@ export interface IArchiveRead {
   open(): void;
   close(): void;
   nextHeader(): IArchiveEntry | undefined;
-  dataRead(): Uint8Array;
+  dataRead(buffer: IArchiveBuffer, offset?: number, length?: number): number;
   dataSkip(): number;
 };
 
 export interface IArchiveWrite {
   release(): void;
 
-  setFormatZip(): number;
+  set format(value: string);
+  addFilter(filter: string): void;
+  setFormatFilterByExt(filename: string): void;
 
   set onopen(callback: ArchiveOpenCallback);
   set onwrite(callback: ArchiveWriteCallback);
@@ -74,7 +79,7 @@ export interface IArchiveWrite {
   open(): void;
   close(): void;
   writeHeader(entry: IArchiveEntry): number;
-  writeData(buffer: DataView, offset?: number, length?: number): number;
+  writeData(buffer: IArchiveBuffer, offset?: number, length?: number): number;
 };
 
 export interface IArchive {
