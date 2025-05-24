@@ -96,7 +96,7 @@ meta_ptr extend_heap(meta_ptr last, size_t size)
     old_break->size = size;
     old_break->free = 0;
     old_break->next = NULL;
-    old_break->prev = NULL;
+    old_break->prev = last;
     old_break->ptr = old_break->data;
     if (last)
     {
@@ -124,7 +124,7 @@ void *malloc(size_t size)
         block = find_suitable_block(&last, s);
         if (block)
         {
-            if (block->size - s >= (META_BLOCK_SIZE + 4))
+            if ((block->size - s) >= (META_BLOCK_SIZE + 4))
             {
                 split_space(block, s);
             }
@@ -244,22 +244,6 @@ void free(void *ptr)
  */
 
 /*
- * The function copy_data() is used to copy the data from a source block to destination block.
- * It runs a loop from the starting memory location till the ending memory location.
- */
-
-void copy_data(meta_ptr src, meta_ptr dest)
-{
-    int *src_data = src->data;
-    int *dest_data = dest->data;
-    size_t i;
-    for (i = 0; i * 4 < src->size && i * 4 < dest->size; i++)
-    {
-        dest_data[i] = src_data[i];
-    }
-}
-
-/*
  * realloc() takes two arguments: pointer pointing to old memory location
  * and the size of the new memory block to be allocated.
  * If the pointer given as argument is NULL then malloc() is used to create a momory allocation and the new pointer is returned.
@@ -297,7 +281,7 @@ void *realloc(void *p, size_t size)
          */
         if (old_block->size >= s)
         {
-            if (old_block->size >= (META_BLOCK_SIZE + 4))
+            if ((old_block->size - s) >= (META_BLOCK_SIZE + 4))
             {
                 split_space(old_block, s);
             }
@@ -307,7 +291,7 @@ void *realloc(void *p, size_t size)
             if (old_block->next && old_block->next->free && (old_block->size + old_block->next->size + META_BLOCK_SIZE) >= s)
             {
                 merge_blocks(old_block);
-                if (old_block - s >= (META_BLOCK_SIZE + 4))
+                if ((old_block->size - s) >= (META_BLOCK_SIZE + 4))
                 {
                     split_space(old_block, s);
                 }
@@ -315,14 +299,10 @@ void *realloc(void *p, size_t size)
             else
             {
                 new_ptr = malloc(s);
-                
-                if (!new_ptr)
-                    return NULL;
-                
-                new_block = get_block_addr(new_ptr);
-                copy_data(old_block, new_block);
-                
-                free(p);
+                if (new_ptr) {
+                    __builtin_memcpy(new_ptr, old_block->ptr, old_block->size);
+                    free(p);
+                }
                 return new_ptr;
             }
         }
@@ -333,7 +313,7 @@ void *realloc(void *p, size_t size)
 
 /*
  * This file contains the implementaion of the function calloc()
- * For the details on malloc() and allign4() refer the file malloc.c
+ * For the details on malloc() and align4() refer the file malloc.c
  * calloc() first creates the required chunk of memory using malloc()
  * then it sets the values of each byte to 0 by iterating through it.
  */

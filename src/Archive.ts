@@ -7,7 +7,6 @@
  * under the MIT License. See LICENSE file for details.
  */
 
-export const ARCHIVE_EOF = 1;
 export const ARCHIVE_OK = 0;
 export const ARCHIVE_RETRY = -10;
 export const ARCHIVE_WARN = -20;
@@ -25,10 +24,33 @@ export const AE_IFIFO  = 0x1000;
 
 export type ArchiveOpenCallback = () => number;
 export type ArchiveReadCallback = () => Buffer | undefined;
+export type ArchiveWriteCallback = (buffer: IArchiveBuffer) => void;
 export type ArchiveCloseCallback = () => number;
 
-export interface ArchiveRead {
+export interface IArchiveBuffer {
   release(): void;
+
+  get buffer(): ArrayBuffer;
+  get byteOffset(): number;
+  get byteLength(): number;
+};
+
+export interface IArchiveEntry {
+  release(): void;
+
+  get pathname(): string | undefined;
+  set pathname(value: string);
+
+  get filetype(): number;
+  set filetype(filetype: number);
+
+  get size(): number;
+  set size(value: number);
+};
+
+export interface IArchiveRead {
+  release(): void;
+
   supportFilterAll(): void;
   supportFormatAll(): void;
 
@@ -37,16 +59,32 @@ export interface ArchiveRead {
   set onclose(callback: ArchiveCloseCallback);
 
   open(): void;
-  close(): number;
-  nextHeader(): boolean;
-  dataRead(): Uint8Array;
+  close(): void;
+  nextHeader(): IArchiveEntry | undefined;
+  dataRead(buffer: IArchiveBuffer, offset?: number, length?: number): number;
   dataSkip(): number;
-
-  entryPathname(): string | null;
-  entryFiletype(): number;
-  entrySize(): number;
 };
 
-export interface ArchiveContext {
-  newRead(): ArchiveRead;
+export interface IArchiveWrite {
+  release(): void;
+
+  set format(value: string);
+  addFilter(filter: string): void;
+  setFormatFilterByExt(filename: string): void;
+
+  set onopen(callback: ArchiveOpenCallback);
+  set onwrite(callback: ArchiveWriteCallback);
+  set onclose(callback: ArchiveCloseCallback);
+
+  open(): void;
+  close(): void;
+  writeHeader(entry: IArchiveEntry): number;
+  writeData(buffer: IArchiveBuffer, offset?: number, length?: number): number;
+};
+
+export interface IArchive {
+  newRead(): IArchiveRead;
+  newWrite(): IArchiveWrite;
+  newEntry(): IArchiveEntry;
+  newBuffer(length: number): IArchiveBuffer;
 };

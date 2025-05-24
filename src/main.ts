@@ -15,11 +15,13 @@ import libarchive from "libarchive";
 const _O = (sopt: string, lopt: string, arg: string | null, desc: string) => ({sopt, lopt, arg, desc});
 
 const opts = [
-  _O( "x",   "extract",   null,       "extract files from an archive" ),
-  _O( "C",   "directory", "DIR",      "change to directory DIR"       ),
-  _O( "f",   "file",      "ARCHIVE",  "extract files from an archive" ),
-  _O( "",    "version",   null,       "print program version"         ),
-  _O( "?",   "help",      null,       "give this help list"           ),
+  _O( "c",   "create",    null,       "create a new archive"           ),
+  _O( "x",   "extract",   null,       "extract files from an archive"  ),
+  _O( "C",   "directory", "DIR",      "change to directory DIR"        ),
+  _O( "f",   "file",      "ARCHIVE",  "extract files from an archive"  ),
+  _O( "",    "version",   null,       "print program version"          ),
+  _O( "v",   "verbose",   null,       "verbosely list files processed" ),
+  _O( "?",   "help",      null,       "give this help list"            ),
 ];
 
 const TRY_MESSAGE = `Try '${PROJECT_NAME} --help' for more information.`;
@@ -28,7 +30,8 @@ function usage() {
   console.log(`Usage: ${PROJECT_NAME} [OPTION...] [FILE]...`);
   console.log("");
   console.log("Examples:");
-  console.log(`  ${PROJECT_NAME} -xf archive.zip   # Extract all files from archive.zip`);
+  console.log(`  ${PROJECT_NAME} -cvf archive.tar dir file # Create archive.tar from dir and file`);
+  console.log(`  ${PROJECT_NAME} -xvf archive.zip          # Extract all files from archive.zip`);
   console.log("");
   console.log("Options:");
 
@@ -50,12 +53,19 @@ function usage() {
 async function runScript() {
   const [ ,, ...args ] = process.argv;
 
+  const files = [];
   const options: any = {};
   let lastOpt = "";
+
   for (const iter of args) {
     if (!iter) {
       console.log(`${PROJECT_NAME}: option is empty`);
       process.exit(1);
+    }
+
+    if (files.length) {
+      files.push(iter);
+      continue;
     }
 
     if (lastOpt) {
@@ -87,26 +97,30 @@ async function runScript() {
       continue;
     }
 
-    const soptList = (iter[0] == "-") ? iter.slice(1) : iter;
-    for (const ch of soptList) {
-      const opt = opts.find(i => i.sopt === ch);
-      if (!opt) {
-        console.log(`${PROJECT_NAME}: invalid option -- '${ch}'`);
-        console.log(TRY_MESSAGE);
-        process.exit(1);
+    if (iter[0] == "-") {
+      for (const ch of iter.slice(1)) {
+        const opt = opts.find(i => i.sopt === ch);
+        if (!opt) {
+          console.log(`${PROJECT_NAME}: invalid option -- '${ch}'`);
+          console.log(TRY_MESSAGE);
+          process.exit(1);
+        }
+        if (lastOpt) {
+          console.log(`${PROJECT_NAME}: option '${lastOpt}' not last in '${iter}'`);
+          console.log(TRY_MESSAGE);
+          process.exit(1);
+        }
+        if (opt.arg) {
+          lastOpt = opt.lopt;
+        }
+        else {
+          options[opt.lopt] = true;
+        }
       }
-      if (lastOpt) {
-        console.log(`${PROJECT_NAME}: option '${lastOpt}' not last in '${iter}'`);
-        console.log(TRY_MESSAGE);
-        process.exit(1);
-      }
-      if (opt.arg) {
-        lastOpt = opt.lopt;
-      }
-      else {
-        options[opt.lopt] = true;
-      }
+      continue;
     }
+
+    files.push(iter);
   }
 
   if (options.help) {
@@ -121,12 +135,21 @@ async function runScript() {
         console.log(`${PROJECT_NAME}: Archive file not specified (missing -f option)`);
         process.exit(1);
     }
-    await libarchive.decompress(options.file, options.directory);
+    await libarchive.decompress(options.file, options.directory, { verbose: options.verbose });
+    return;
+  }
+
+  if (options.create) {
+    if (!options.file) {
+        console.log(`${PROJECT_NAME}: Archive file not specified (missing -f option)`);
+        process.exit(1);
+    }
+    await libarchive.compress(files, options.file, { verbose: options.verbose });
     return;
   }
 
   if (options.version) {
-    console.log(`${PROJECT_NAME}.js ${PROJECT_VERSION}`);
+    console.log(`Version ${PROJECT_VERSION}`);
     console.log(context.versionDetails);
     return;
   }

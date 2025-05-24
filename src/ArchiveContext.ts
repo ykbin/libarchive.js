@@ -7,22 +7,34 @@
  * under the MIT License. See LICENSE file for details.
  */
 
-import { ArchiveRead, ArchiveContext } from "./Archive";
-import { ArchiveNative } from "./ArchiveNative";
-import { ArchiveReadClient, ArchiveReadImpl } from "./ArchiveRead";
-import { utf8DataToString } from "./Utils";
+import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveWriteCallback, ArchiveCloseCallback, ARCHIVE_OK } from "./Archive";
+import { ArchiveNative, ArchiveReadPtr, ArchiveWritePtr, ArchiveEntryPtr } from "./ArchiveNative";
+import { ArchiveBuffer } from "./ArchiveBuffer";
+import { utf8DataToString, errorCodeToString } from "./Utils";
 
-class ArchiveReadClientCollection {
-  private _map = new Map<number, ArchiveReadClient>;
+type ArchiveReadCalbacks = {
+  opener?: ArchiveOpenCallback,
+  reader?: ArchiveReadCallback,
+  closer?: ArchiveCloseCallback,
+};
 
-  public get(handle: number) {
+type ArchiveWriteCalbacks = {
+  opener?: ArchiveOpenCallback,
+  writer?: ArchiveWriteCallback,
+  closer?: ArchiveCloseCallback,
+};
+
+class ArchiveCallbacks {
+  private _map = new Map<number, ArchiveReadCalbacks | ArchiveWriteCalbacks>;
+
+  public get(handle: number): ArchiveReadCalbacks | ArchiveWriteCalbacks {
     const archive = this._map.get(handle);
     if (!archive)
       throw Error(`Handle ${handle} does not exists`);
     return archive;
   }
 
-  public set(handle: number, archive: ArchiveReadClient) {
+  public set(handle: number, archive: ArchiveReadCalbacks | ArchiveWriteCalbacks) {
     if (!handle)
       throw Error(`Handle is null`);
     if (this._map.has(handle))
@@ -35,93 +47,275 @@ class ArchiveReadClientCollection {
   }
 };
 
-export class ArchiveContextImpl implements ArchiveContext {
+export class ArchiveContext {
   private _native: ArchiveNative;
   private _memory: WebAssembly.Memory;
-  private _clients: ArchiveReadClientCollection;
-  private _version = "";
-  private _versionDetails = "";
+  private _callbacks = new ArchiveCallbacks;
+  private _readBuffer = new Uint8Array;
 
-  constructor(native: ArchiveNative, memory: WebAssembly.Memory, clients: ArchiveReadClientCollection) {
+  constructor(native: ArchiveNative, memory: WebAssembly.Memory) {
     this._native = native;
     this._memory = memory;
-    this._clients = clients;
   }
 
-  public get version(): string {
-    if (!this._version) {
-      const offset = this._native.archive_version();
-      this._version = utf8DataToString(this._memory.buffer, offset);
+  public get memory(): WebAssembly.Memory {
+    return this._memory;
+  }
+
+  public archive_version(): string {
+    const offset = this._native.archive_version();
+    return utf8DataToString(this._memory.buffer, offset);
+  }
+
+  public archive_version_details(): string {
+    const offset = this._native.archive_version_details();
+    return utf8DataToString(this._memory.buffer, offset);
+  }
+
+  public archive_errno(handle: number): number {
+    return this._native.archive_errno(handle);
+  }
+
+  public archive_error_string(handle: number) {
+    const offset = this._native.archive_error_string(handle);
+    return utf8DataToString(this._memory.buffer, offset);
+  }
+
+  public archive_open_handler(handle: number): number {
+    const client = this._callbacks.get(handle);
+    return client.opener ? client.opener() : 0;
+  }
+
+  public archive_read_handler(handle: number, offset: number, size: number) {
+    if (!this._readBuffer.length) {
+      const client = this._callbacks.get(handle) as ArchiveReadCalbacks;
+      if (!client.reader)
+        return 0;
+      const buf = client.reader();
+      if (!buf)
+        return 0;
+      this._readBuffer = new Uint8Array(buf);
     }
-    return this._version;
+
+    const n = Math.min(size, this._readBuffer.length);
+    const dst = new Uint8Array(this._memory.buffer, offset, n);
+    for (let i = 0; i < n; i++)
+      dst[i] = this._readBuffer[i];
+
+    this._readBuffer = this._readBuffer.slice(n);
+    return n;
   }
 
-  public get versionDetails(): string {
-    if (!this._versionDetails) {
-      const offset = this._native.archive_version_details();
-      this._versionDetails = utf8DataToString(this._memory.buffer, offset);
-    }
-    return this._versionDetails;
+  public archive_read_last_error(handle: number): number {
+    return this._native.archive_read_last_error(handle);
   }
 
-  public newRead(): ArchiveRead {
+  public archive_write_handler(handle: number, offset: number, size: number): number {
+    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+    if (callbacks.writer)
+      callbacks.writer(new ArchiveBuffer(this, offset, size))
+    return size;
+  };
+
+  public archive_close_handler(handle: number): number {
+    const client = this._callbacks.get(handle);
+    return client.closer ? client.closer() : 0;
+  }
+
+  public archive_error_throw(handle: number, code: number): never {
+    const message = this.archive_error_string(handle);
+    const cause = errorCodeToString(code);
+    throw new Error(message, { cause });
+  }
+
+  public archive_read_new(): ArchiveReadPtr {
     const handle = this._native.archive_read_new();
-    const client = {
-      buffers: [],
-      opener: null,
-      reader: null,
-      closer: null,
-    };
-    this._clients.set(handle, client);
-    return new ArchiveReadImpl(this._native, this._memory, client, handle);
+    if (handle) {
+      const impl: ArchiveReadCalbacks = {};
+      this._callbacks.set(handle, impl);
+    }
+    return handle;
   }
 
-  public static async instantiate(buffer: Buffer): Promise<ArchiveContextImpl> {
-    let memory: WebAssembly.Memory;
-    const clients = new ArchiveReadClientCollection;
+  public archive_read_free(handle: number) {
+    this._callbacks.delete(handle);
+    this._native.archive_read_free(handle);
+  }
 
-    const archive_open_handler = (handle: number): number => {
-      const client = clients.get(handle);
-      return client.opener ? client.opener() : 0;
+  public archive_read_support_filter_all(handle: number): void {
+    return this._native.archive_read_support_filter_all(handle);
+  }
+
+  public archive_read_support_format_all(handle: number): void {
+    return this._native.archive_read_support_format_all(handle);
+  }
+
+  public archive_read_open(handle: number): void {
+    const code = this._native.archive_read_open(handle);
+    if (code !== ARCHIVE_OK) {
+      this.archive_error_throw(handle, code);
     }
+  }
 
-    let readBuffer = new Uint8Array;
-    const archive_read_handler = (handle: number, offset: number, size: number): number => {
-      if (!readBuffer.length) {
-        const client = clients.get(handle);
-        if (!client.reader)
-          return 0;
-        const buf = client.reader();
-        if (!buf)
-          return 0;
-        readBuffer = new Uint8Array(buf);
-      }
+  public archive_read_close(handle: number): number {
+    return this._native.archive_read_close(handle);
+  }
+  
+  public archive_read_next_header(handle: number): number {
+    return this._native.archive_read_next_header(handle);
+  }
 
-      const n = Math.min(size, readBuffer.length);
-      const dst = new Uint8Array(memory.buffer, offset, n);
-      for (let i = 0; i < n; i++)
-        dst[i] = readBuffer[i];
+  public archive_read_data(handle: number, offset: number, size: number): number {
+    return this._native.archive_read_data(handle, offset, size);
+  }
 
-      readBuffer = readBuffer.slice(n);
-      return n;
+  public archive_read_data_skip(handle: number): number {
+    return this._native.archive_read_data_skip(handle);
+  }
+
+  public archive_read_set_open_callback(handle: number, callback: ArchiveOpenCallback): void {
+    const callbacks = this._callbacks.get(handle) as ArchiveReadCalbacks;
+    callbacks.opener = callback;
+  }
+
+  public archive_read_set_read_callback(handle: number, callback: ArchiveReadCallback): void {
+    const callbacks = this._callbacks.get(handle) as ArchiveReadCalbacks;
+    callbacks.reader = callback;
+  }
+
+  public archive_read_set_close_callback(handle: number, callback: ArchiveCloseCallback): void {
+    const callbacks = this._callbacks.get(handle) as ArchiveReadCalbacks;
+    callbacks.closer = callback;
+  }
+
+  public archive_write_new(): ArchiveWritePtr {
+    const handle = this._native.archive_write_new();
+    if (handle) {
+      const impl: ArchiveWriteCalbacks = {};
+      this._callbacks.set(handle, impl);
     }
+    return handle;
+  }
 
-    const archive_close_handler = (handle: number): number => {
-      const client = clients.get(handle);
-      return client.closer ? client.closer() : 0;
+  public archive_write_free(handle: number) {
+    this._callbacks.delete(handle);
+    this._native.archive_write_free(handle);
+  }
+
+  public archive_write_set_format_by_name(handle: number, name: number): number {
+    return this._native.archive_write_set_format_by_name(handle, name);
+  }
+
+  public archive_write_add_filter_by_name(handle: number, name: number): number {
+    return this._native.archive_write_add_filter_by_name(handle, name);
+  }
+
+  public archive_write_set_format_filter_by_ext(handle: number, filename: number): number {
+    return this._native.archive_write_set_format_filter_by_ext(handle, filename);
+  }
+
+  public archive_write_set_open_callback(handle: number, callback: ArchiveOpenCallback): void {
+    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+    callbacks.opener = callback;
+  }
+
+  public archive_write_set_write_callback(handle: number, callback: ArchiveWriteCallback): void {
+    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+    callbacks.writer = callback;
+  }
+
+  public archive_write_set_close_callback(handle: number, callback: ArchiveCloseCallback): void {
+    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+    callbacks.closer = callback;
+  }
+  
+  public archive_write_open(handle: number): void {
+    const code = this._native.archive_write_open(handle);
+    if (code !== ARCHIVE_OK) {
+      this.archive_error_throw(handle, code);
     }
+  }
 
-    const importObject = {
-      env: {
-        archive_open_handler,
-        archive_read_handler,
-        archive_close_handler,
-      },
-    };
+  public archive_write_close(handle: number): number {
+    return this._native.archive_write_close(handle);
+  }
 
-    const instSource = await WebAssembly.instantiate(buffer, importObject);
-    const native = instSource.instance.exports as ArchiveNative;
-    memory = native.memory;
-    return new ArchiveContextImpl(native, memory, clients);
+  public archive_write_header(handle: number, entry: ArchiveEntryPtr): number {
+    return this._native.archive_write_header(handle, entry);
+  }
+
+  public archive_write_data(handle: ArchiveWritePtr, offset: number, size: number): number {
+    return this._native.archive_write_data(handle, offset, size);
+  }
+
+  public archive_entry_new(): ArchiveEntryPtr {
+    return this._native.archive_entry_new();
+  }
+
+  public archive_entry_free(entry: ArchiveEntryPtr) {
+    this._native.archive_entry_free(entry);
+  }
+
+  public archive_entry_pathname(entry: ArchiveEntryPtr): string | undefined {
+    const offset = this._native.archive_entry_pathname_w(entry);
+    if (!offset)
+      return;
+
+    const bytes = new Uint32Array(this._memory.buffer, offset);
+
+    let pathname = "";
+    for (let i = 0; bytes[i]; i++)
+      pathname += String.fromCharCode(bytes[i]);
+
+    return pathname;
+  }
+
+  public archive_entry_set_pathname(entry: ArchiveEntryPtr, name: string): boolean {
+    const encoder = new TextEncoder;
+    const bytes = encoder.encode(name + "\x00");
+    const offset = this._native.archive_buffer_new(bytes.length);
+    if (!offset)
+      return false;
+
+    (new Uint8Array(this._memory.buffer, offset, bytes.length)).set(bytes);
+
+    this._native.archive_entry_set_pathname_utf8(entry, offset);
+    this._native.archive_buffer_free(offset);
+    return true;
+  }
+
+  public archive_entry_filetype(entry: ArchiveEntryPtr): number {
+    return this._native.archive_entry_filetype(entry);
+  }
+
+  public archive_entry_set_filetype(entry: ArchiveEntryPtr, filetype: number): void {
+    this._native.archive_entry_set_filetype(entry, filetype);
+  }
+
+  public archive_entry_size(entry: ArchiveEntryPtr): number {
+    const lo = this._native.archive_entry_size_lo(entry);
+    const hi = this._native.archive_entry_size_hi(entry);
+    return hi * 4294967296 + lo;
+  }
+
+  public archive_entry_set_size(entry: ArchiveEntryPtr, size: number): void {
+    this._native.archive_entry_set_size(entry, 0, size);
+  }
+
+  public archive_buffer_new(size: number): number {
+    return this._native.archive_buffer_new(size);
+  }
+
+  public archive_buffer_free(buffer: number): void {
+    this._native.archive_buffer_free(buffer);
+  }
+
+  public archive_buffer_from(str: string): number {
+    const encoder = new TextEncoder;
+    const bytes = encoder.encode(str + "\x00");
+    const offset = this._native.archive_buffer_new(bytes.length);
+    if (offset)
+      (new Uint8Array(this._memory.buffer, offset, bytes.length)).set(bytes);
+    return offset;
   }
 };

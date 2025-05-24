@@ -1,6 +1,6 @@
 {
   "name": "libarchive",
-  "version": "0.0.1-develop.7",
+  "version": "0.0.1-develop.8",
   "description": "Multi-format archive and compression library",
   "author": "Yurii Yakubin",
   "homepage": "https://github.com/ykbin/libarchive.js#readme",
@@ -19,7 +19,25 @@
     "licenses/libarchive.COPYING",
     "licenses/libbz2.LICENSE",
     "licenses/lz4.LICENSE",
-    "licenses/zlib.LICENSE"
+    "licenses/zlib.LICENSE",
+    "LICENSE"
+  ],
+  "keywords": [
+    "archive",
+    "wasm",
+    "deflate",
+    "gzip",
+    "gunzip",
+    "unzip",
+    "zip",
+    "tar",
+    "tgz",
+    "untar",
+    "lz4",
+    "cpio",
+    "extract",
+    "compress",
+    "compression"
   ],
   "scripts": {
     "build:types": "dts-bundle-generator --config dtsconfig.js",
