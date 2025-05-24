@@ -30,8 +30,8 @@ function usage() {
   console.log(`Usage: ${PROJECT_NAME} [OPTION...] [FILE]...`);
   console.log("");
   console.log("Examples:");
-  console.log(`  ${PROJECT_NAME} -cf archive.tar dir file # Create archive.tar from dir and file`);
-  console.log(`  ${PROJECT_NAME} -xf archive.zip          # Extract all files from archive.zip`);
+  console.log(`  ${PROJECT_NAME} -cvf archive.tar dir file # Create archive.tar from dir and file`);
+  console.log(`  ${PROJECT_NAME} -xvf archive.zip          # Extract all files from archive.zip`);
   console.log("");
   console.log("Options:");
 
@@ -149,7 +149,7 @@ async function runScript() {
   }
 
   if (options.version) {
-    console.log(`${PROJECT_NAME}.js ${PROJECT_VERSION}`);
+    console.log(`Version ${PROJECT_VERSION}`);
     console.log(context.versionDetails);
     return;
   }

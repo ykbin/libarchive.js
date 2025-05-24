@@ -149,19 +149,22 @@ const libarchive = Object.assign(newArchiveContext, {
 
     archive.setFormatFilterByExt(output);
 
-    const chunks = new Array<Buffer>;
+    const chunks = new Array<Uint8Array>;
     archive.onwrite = (buffer: IArchiveBuffer) => {
-      chunks.push(Buffer.from(buffer.buffer, buffer.byteOffset, buffer.byteLength));
+      const bytes = new Uint8Array(buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength));
+      chunks.push(bytes);
     }
+
     archive.open();
 
     const buffer = context.newBuffer(8192);
     const fd = await fs.promises.open(output, "w");
     const flushChunks = async () => {
-      let bytes = chunks.shift();
-      while (bytes) {
+      for (;;) {
+        const bytes = chunks.shift();
+        if (!bytes)
+          return;
         await fd.write(bytes);
-        bytes = chunks.shift();
       }
     }
 
