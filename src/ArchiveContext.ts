@@ -8,9 +8,8 @@
  */
 
 import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveWriteCallback, ArchiveCloseCallback, ARCHIVE_OK } from "./Archive";
-import { ArchiveNative, ArchiveReadPtr, ArchiveWritePtr, ArchiveEntryPtr } from "./ArchiveNative";
+import { ArchiveNative, ArchivePtr, ArchiveEntryPtr } from "./ArchiveNative";
 import { ArchiveBuffer } from "./ArchiveBuffer";
-import { utf8DataToString, errorCodeToString } from "./Utils";
 
 type ArchiveReadCalbacks = {
   opener?: ArchiveOpenCallback,
@@ -27,23 +26,23 @@ type ArchiveWriteCalbacks = {
 class ArchiveCallbacks {
   private _map = new Map<number, ArchiveReadCalbacks | ArchiveWriteCalbacks>;
 
-  public get(handle: number): ArchiveReadCalbacks | ArchiveWriteCalbacks {
-    const archive = this._map.get(handle);
+  public get(archive: number): ArchiveReadCalbacks | ArchiveWriteCalbacks {
+    const callbacks = this._map.get(archive);
+    if (!callbacks)
+      throw Error(`Handle ${archive} does not exists`);
+    return callbacks;
+  }
+
+  public set(archive: number, callbacks: ArchiveReadCalbacks | ArchiveWriteCalbacks) {
     if (!archive)
-      throw Error(`Handle ${handle} does not exists`);
-    return archive;
-  }
-
-  public set(handle: number, archive: ArchiveReadCalbacks | ArchiveWriteCalbacks) {
-    if (!handle)
       throw Error(`Handle is null`);
-    if (this._map.has(handle))
-      throw Error(`Handle ${handle} is registred`);
-    this._map.set(handle, archive);
+    if (this._map.has(archive))
+      throw Error(`Handle ${archive} is registred`);
+    this._map.set(archive, callbacks);
   }
 
-  public delete(handle: number) {
-    this._map.delete(handle);
+  public delete(archive: number) {
+    this._map.delete(archive);
   }
 };
 
@@ -58,37 +57,34 @@ export class ArchiveContext {
     this._memory = memory;
   }
 
-  public get memory(): WebAssembly.Memory {
-    return this._memory;
+  public get memoryBuffer(): ArrayBuffer {
+    return this._memory.buffer;
   }
 
-  public archive_version(): string {
-    const offset = this._native.archive_version();
-    return utf8DataToString(this._memory.buffer, offset);
+  public archive_version(): number {
+    return this._native.archive_version();
   }
 
-  public archive_version_details(): string {
-    const offset = this._native.archive_version_details();
-    return utf8DataToString(this._memory.buffer, offset);
+  public archive_version_details(): number {
+    return this._native.archive_version_details();
   }
 
-  public archive_errno(handle: number): number {
-    return this._native.archive_errno(handle);
+  public archive_errno(archive: number): number {
+    return this._native.archive_errno(archive);
   }
 
-  public archive_error_string(handle: number) {
-    const offset = this._native.archive_error_string(handle);
-    return utf8DataToString(this._memory.buffer, offset);
+  public archive_error_string(archive: number): number {
+    return this._native.archive_error_string(archive);
   }
 
-  public archive_open_handler(handle: number): number {
-    const client = this._callbacks.get(handle);
+  public archive_open_handler(archive: number): number {
+    const client = this._callbacks.get(archive);
     return client.opener ? client.opener() : 0;
   }
 
-  public archive_read_handler(handle: number, offset: number, size: number) {
+  public archive_read_handler(archive: number, offset: number, size: number) {
     if (!this._readBuffer.length) {
-      const client = this._callbacks.get(handle) as ArchiveReadCalbacks;
+      const client = this._callbacks.get(archive) as ArchiveReadCalbacks;
       if (!client.reader)
         return 0;
       const buf = client.reader();
@@ -106,146 +102,146 @@ export class ArchiveContext {
     return n;
   }
 
-  public archive_read_last_error(handle: number): number {
-    return this._native.archive_read_last_error(handle);
+  public archive_read_last_error(archive: number): number {
+    return this._native.archive_read_last_error(archive);
   }
 
-  public archive_write_handler(handle: number, offset: number, size: number): number {
-    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+  public archive_write_handler(archive: number, offset: number, size: number): number {
+    const callbacks = this._callbacks.get(archive) as ArchiveWriteCalbacks;
     if (callbacks.writer)
       callbacks.writer(new ArchiveBuffer(this, offset, size))
     return size;
   };
 
-  public archive_close_handler(handle: number): number {
-    const client = this._callbacks.get(handle);
+  public archive_close_handler(archive: number): number {
+    const client = this._callbacks.get(archive);
     return client.closer ? client.closer() : 0;
   }
 
-  public archive_error_throw(handle: number, code: number): never {
-    const message = this.archive_error_string(handle);
-    const cause = errorCodeToString(code);
-    throw new Error(message, { cause });
-  }
-
-  public archive_read_new(): ArchiveReadPtr {
-    const handle = this._native.archive_read_new();
-    if (handle) {
+  public archive_read_new(): ArchivePtr {
+    const archive = this._native.archive_read_new();
+    if (archive) {
       const impl: ArchiveReadCalbacks = {};
-      this._callbacks.set(handle, impl);
+      this._callbacks.set(archive, impl);
     }
-    return handle;
+    return archive;
   }
 
-  public archive_read_free(handle: number) {
-    this._callbacks.delete(handle);
-    this._native.archive_read_free(handle);
+  public archive_read_free(archive: number) {
+    this._callbacks.delete(archive);
+    this._native.archive_read_free(archive);
   }
 
-  public archive_read_support_filter_all(handle: number): void {
-    return this._native.archive_read_support_filter_all(handle);
+  public archive_read_add_passphrase(archive: ArchivePtr, passphrase: number): number {
+    return this._native.archive_read_add_passphrase(archive, passphrase);
   }
 
-  public archive_read_support_format_all(handle: number): void {
-    return this._native.archive_read_support_format_all(handle);
+  public archive_read_support_filter_all(archive: number): void {
+    return this._native.archive_read_support_filter_all(archive);
   }
 
-  public archive_read_open(handle: number): void {
-    const code = this._native.archive_read_open(handle);
-    if (code !== ARCHIVE_OK) {
-      this.archive_error_throw(handle, code);
-    }
+  public archive_read_support_format_all(archive: number): void {
+    return this._native.archive_read_support_format_all(archive);
   }
 
-  public archive_read_close(handle: number): number {
-    return this._native.archive_read_close(handle);
+  public archive_read_open(archive: number): number {
+    return this._native.archive_read_open(archive);
+  }
+
+  public archive_read_close(archive: number): number {
+    return this._native.archive_read_close(archive);
   }
   
-  public archive_read_next_header(handle: number): number {
-    return this._native.archive_read_next_header(handle);
+  public archive_read_next_header(archive: number): number {
+    return this._native.archive_read_next_header(archive);
   }
 
-  public archive_read_data(handle: number, offset: number, size: number): number {
-    return this._native.archive_read_data(handle, offset, size);
+  public archive_read_data(archive: number, offset: number, size: number): number {
+    return this._native.archive_read_data(archive, offset, size);
   }
 
-  public archive_read_data_skip(handle: number): number {
-    return this._native.archive_read_data_skip(handle);
+  public archive_read_data_skip(archive: number): number {
+    return this._native.archive_read_data_skip(archive);
   }
 
-  public archive_read_set_open_callback(handle: number, callback: ArchiveOpenCallback): void {
-    const callbacks = this._callbacks.get(handle) as ArchiveReadCalbacks;
+  public archive_read_set_open_callback(archive: number, callback: ArchiveOpenCallback): void {
+    const callbacks = this._callbacks.get(archive) as ArchiveReadCalbacks;
     callbacks.opener = callback;
   }
 
-  public archive_read_set_read_callback(handle: number, callback: ArchiveReadCallback): void {
-    const callbacks = this._callbacks.get(handle) as ArchiveReadCalbacks;
+  public archive_read_set_read_callback(archive: number, callback: ArchiveReadCallback): void {
+    const callbacks = this._callbacks.get(archive) as ArchiveReadCalbacks;
     callbacks.reader = callback;
   }
 
-  public archive_read_set_close_callback(handle: number, callback: ArchiveCloseCallback): void {
-    const callbacks = this._callbacks.get(handle) as ArchiveReadCalbacks;
+  public archive_read_set_close_callback(archive: number, callback: ArchiveCloseCallback): void {
+    const callbacks = this._callbacks.get(archive) as ArchiveReadCalbacks;
     callbacks.closer = callback;
   }
 
-  public archive_write_new(): ArchiveWritePtr {
-    const handle = this._native.archive_write_new();
-    if (handle) {
+  public archive_write_new(): ArchivePtr {
+    const archive = this._native.archive_write_new();
+    if (archive) {
       const impl: ArchiveWriteCalbacks = {};
-      this._callbacks.set(handle, impl);
+      this._callbacks.set(archive, impl);
     }
-    return handle;
+    return archive;
   }
 
-  public archive_write_free(handle: number) {
-    this._callbacks.delete(handle);
-    this._native.archive_write_free(handle);
+  public archive_write_free(archive: number) {
+    this._callbacks.delete(archive);
+    this._native.archive_write_free(archive);
   }
 
-  public archive_write_set_format_by_name(handle: number, name: number): number {
-    return this._native.archive_write_set_format_by_name(handle, name);
+  public archive_write_set_options(archive: number, options: number): number {
+    return this._native.archive_write_set_options(archive, options);
   }
 
-  public archive_write_add_filter_by_name(handle: number, name: number): number {
-    return this._native.archive_write_add_filter_by_name(handle, name);
+  public archive_write_set_passphrase(archive: number, passphrase: number): number {
+    return this._native.archive_write_set_passphrase(archive, passphrase);
   }
 
-  public archive_write_set_format_filter_by_ext(handle: number, filename: number): number {
-    return this._native.archive_write_set_format_filter_by_ext(handle, filename);
+  public archive_write_set_format_by_name(archive: number, name: number): number {
+    return this._native.archive_write_set_format_by_name(archive, name);
   }
 
-  public archive_write_set_open_callback(handle: number, callback: ArchiveOpenCallback): void {
-    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+  public archive_write_add_filter_by_name(archive: number, name: number): number {
+    return this._native.archive_write_add_filter_by_name(archive, name);
+  }
+
+  public archive_write_set_format_filter_by_ext(archive: number, filename: number): number {
+    return this._native.archive_write_set_format_filter_by_ext(archive, filename);
+  }
+
+  public archive_write_set_open_callback(archive: number, callback: ArchiveOpenCallback): void {
+    const callbacks = this._callbacks.get(archive) as ArchiveWriteCalbacks;
     callbacks.opener = callback;
   }
 
-  public archive_write_set_write_callback(handle: number, callback: ArchiveWriteCallback): void {
-    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+  public archive_write_set_write_callback(archive: number, callback: ArchiveWriteCallback): void {
+    const callbacks = this._callbacks.get(archive) as ArchiveWriteCalbacks;
     callbacks.writer = callback;
   }
 
-  public archive_write_set_close_callback(handle: number, callback: ArchiveCloseCallback): void {
-    const callbacks = this._callbacks.get(handle) as ArchiveWriteCalbacks;
+  public archive_write_set_close_callback(archive: number, callback: ArchiveCloseCallback): void {
+    const callbacks = this._callbacks.get(archive) as ArchiveWriteCalbacks;
     callbacks.closer = callback;
   }
   
-  public archive_write_open(handle: number): void {
-    const code = this._native.archive_write_open(handle);
-    if (code !== ARCHIVE_OK) {
-      this.archive_error_throw(handle, code);
-    }
+  public archive_write_open(archive: number): number {
+    return this._native.archive_write_open(archive);
   }
 
-  public archive_write_close(handle: number): number {
-    return this._native.archive_write_close(handle);
+  public archive_write_close(archive: number): number {
+    return this._native.archive_write_close(archive);
   }
 
-  public archive_write_header(handle: number, entry: ArchiveEntryPtr): number {
-    return this._native.archive_write_header(handle, entry);
+  public archive_write_header(archive: number, entry: ArchiveEntryPtr): number {
+    return this._native.archive_write_header(archive, entry);
   }
 
-  public archive_write_data(handle: ArchiveWritePtr, offset: number, size: number): number {
-    return this._native.archive_write_data(handle, offset, size);
+  public archive_write_data(archive: ArchivePtr, offset: number, size: number): number {
+    return this._native.archive_write_data(archive, offset, size);
   }
 
   public archive_entry_new(): ArchiveEntryPtr {
@@ -256,32 +252,12 @@ export class ArchiveContext {
     this._native.archive_entry_free(entry);
   }
 
-  public archive_entry_pathname(entry: ArchiveEntryPtr): string | undefined {
-    const offset = this._native.archive_entry_pathname_w(entry);
-    if (!offset)
-      return;
-
-    const bytes = new Uint32Array(this._memory.buffer, offset);
-
-    let pathname = "";
-    for (let i = 0; bytes[i]; i++)
-      pathname += String.fromCharCode(bytes[i]);
-
-    return pathname;
+  public archive_entry_pathname_utf8(entry: ArchiveEntryPtr): number {
+    return this._native.archive_entry_pathname_utf8(entry);
   }
 
-  public archive_entry_set_pathname(entry: ArchiveEntryPtr, name: string): boolean {
-    const encoder = new TextEncoder;
-    const bytes = encoder.encode(name + "\x00");
-    const offset = this._native.archive_buffer_new(bytes.length);
-    if (!offset)
-      return false;
-
-    (new Uint8Array(this._memory.buffer, offset, bytes.length)).set(bytes);
-
-    this._native.archive_entry_set_pathname_utf8(entry, offset);
-    this._native.archive_buffer_free(offset);
-    return true;
+  public archive_entry_set_pathname_utf8(entry: ArchiveEntryPtr, pathname: number): void {
+    this._native.archive_entry_set_pathname_utf8(entry, pathname);
   }
 
   public archive_entry_filetype(entry: ArchiveEntryPtr): number {
@@ -300,6 +276,10 @@ export class ArchiveContext {
 
   public archive_entry_set_size(entry: ArchiveEntryPtr, size: number): void {
     this._native.archive_entry_set_size(entry, 0, size);
+  }
+
+  public archive_entry_set_perm(entry: ArchiveEntryPtr, mode: number): void {
+    this._native.archive_entry_set_perm(entry, mode);
   }
 
   public archive_buffer_new(size: number): number {

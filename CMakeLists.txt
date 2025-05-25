@@ -14,6 +14,7 @@ endif ()
 find_package(ZLIB REQUIRED)
 find_package(LZ4 REQUIRED)
 find_package(BZip2 REQUIRED)
+find_package(ZSTD REQUIRED)
 find_package(LibArchive REQUIRED)
 
 set(libarchive_SOURCES
@@ -30,6 +31,7 @@ set(libarchive_LIBRARIES
   ZLIB::ZLIB
   LZ4::LZ4
   BZip2::BZip2
+  ZSTD::ZSTD
   LibArchive::LibArchive
   )
 

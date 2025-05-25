@@ -14,6 +14,7 @@ import { ArchiveBuffer } from "./ArchiveBuffer";
 import { ArchiveEntry } from "./ArchiveEntry";
 import { ArchiveRead } from "./ArchiveRead";
 import { ArchiveWrite } from "./ArchiveWrite";
+import { NO_MEMORY, StringExtras } from "./Utils";
 
 export class Archive implements IArchive {
   private _context: ArchiveContext;
@@ -25,42 +26,46 @@ export class Archive implements IArchive {
   }
 
   public get version(): string {
-    if (!this._version)
-      this._version = this._context.archive_version();
+    if (!this._version) {
+      const versionPtr = this._context.archive_version();
+      this._version = StringExtras.fromBuffer(this._context.memoryBuffer, versionPtr);
+    }
     return this._version;
   }
 
   public get versionDetails(): string {
-    if (!this._versionDetails)
-      this._versionDetails = this._context.archive_version_details();
+    if (!this._versionDetails) {
+      const versionDetailsPtr = this._context.archive_version_details();
+      this._versionDetails = StringExtras.fromBuffer(this._context.memoryBuffer, versionDetailsPtr);
+    }
     return this._versionDetails;
   }
 
   public newRead(): ArchiveRead {
     const archive_read = this._context.archive_read_new();
     if (!archive_read)
-      throw new Error("No Memory");
+      throw new Error(NO_MEMORY);
     return new ArchiveRead(this._context, archive_read);
   }
 
   public newWrite(): ArchiveWrite {
     const archive_write = this._context.archive_write_new();
     if (!archive_write)
-      throw new Error("No Memory");
+      throw new Error(NO_MEMORY);
     return new ArchiveWrite(this._context, archive_write);
   }
 
   public newEntry(): ArchiveEntry {
     const entry = this._context.archive_entry_new();
     if (!entry)
-      throw new Error("No Memory");
+      throw new Error(NO_MEMORY);
     return new ArchiveEntry(this._context, entry);
   }
 
   public newBuffer(length: number): ArchiveBuffer {
     const offset = this._context.archive_buffer_new(length);
     if (!offset)
-      throw new Error("No Memory");
+      throw new Error(NO_MEMORY);
     return new ArchiveBuffer(this._context, offset, length);
   }
 
@@ -69,10 +74,10 @@ export class Archive implements IArchive {
 
     const importObject = {
       env: {
-        archive_open_handler: (handle: number) => context.archive_open_handler(handle),
-        archive_read_handler: (handle: number, offset: number, size: number) => context.archive_read_handler(handle, offset, size),
-        archive_write_handler: (handle: number, offset: number, size: number) => context.archive_write_handler(handle, offset, size),
-        archive_close_handler: (handle: number) => context.archive_close_handler(handle),
+        archive_open_handler: (archive: number) => context.archive_open_handler(archive),
+        archive_read_handler: (archive: number, offset: number, size: number) => context.archive_read_handler(archive, offset, size),
+        archive_write_handler: (archive: number, offset: number, size: number) => context.archive_write_handler(archive, offset, size),
+        archive_close_handler: (archive: number) => context.archive_close_handler(archive),
       },
     };
 

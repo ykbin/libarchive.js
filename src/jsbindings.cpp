@@ -102,6 +102,12 @@ void __archive_read_support_format_all(struct archive_read_wrapper* arch)
   archive_read_support_format_all(arch->base.archive);
 }
 
+__ATTR_EXPORT_NAME("archive_read_add_passphrase")
+int __archive_read_add_passphrase(struct archive_read_wrapper* arch, const char* passphrase)
+{
+  return archive_read_add_passphrase(arch->base.archive, passphrase);
+}
+
 static int archive_on_open(struct archive* a, void* userdata)
 {
   auto arch = reinterpret_cast<struct archive_base_wrapper*>(userdata);
@@ -190,6 +196,18 @@ void __archive_write_free(struct archive_write_wrapper* arch)
 {
   archive_write_free(arch->base.archive);
   free(arch);
+}
+
+__ATTR_EXPORT_NAME("archive_write_set_options")
+int __archive_write_set_options(struct archive_write_wrapper* arch, const char* options)
+{
+  return archive_write_set_options(arch->base.archive, options);
+}
+
+__ATTR_EXPORT_NAME("archive_write_set_passphrase")
+int __archive_write_set_passphrase(struct archive_write_wrapper* arch, const char* passphrase)
+{
+  return archive_write_set_passphrase(arch->base.archive, passphrase);
 }
 
 __ATTR_EXPORT_NAME("archive_write_set_format_by_name")
@@ -292,6 +310,12 @@ __ATTR_EXPORT_NAME("archive_entry_set_pathname_utf8")
 void __archive_entry_set_pathname_utf8(struct archive_entry* entry, const char* name)
 {
   archive_entry_set_pathname_utf8(entry, name);
+}
+
+__ATTR_EXPORT_NAME("archive_entry_set_perm")
+void __archive_entry_set_perm(struct archive_entry* entry, mode_t mode)
+{
+  archive_entry_set_perm(entry, mode);
 }
 
 __ATTR_EXPORT_NAME("archive_buffer_new")

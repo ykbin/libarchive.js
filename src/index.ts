@@ -69,13 +69,22 @@ const libarchive = Object.assign(newArchiveContext, {
 
   async decompress(input: string, output?: string, options?: DecompressOptions): Promise<void> {
     const verbose = options && options.verbose;
+
+    const chunks: Buffer[] = [];
+    if (input.startsWith("http://") || input.startsWith("https://")) {
+      const response = await fetch(input);
+      chunks.push(Buffer.from(await response.arrayBuffer()));
+    }
+    else {
+      chunks.push(await fs.promises.readFile(input));
+    }
+
     const context = await newArchiveContext();
     const archive = context.newRead();
 
     archive.supportFilterAll();
     archive.supportFormatAll();
 
-    const chunks = [ await fs.promises.readFile(input) ];
     archive.onread = () => chunks.shift();
     archive.open();
 
@@ -184,6 +193,7 @@ const libarchive = Object.assign(newArchiveContext, {
       const entry = context.newEntry();
       entry.pathname = iter.name;
       entry.filetype = filetype;
+      entry.perm = 0o644;
 
       if (filetype == AE_IFREG) {
         entry.size = iter.stat.size;

@@ -1,7 +1,7 @@
-libarchive.js
+libarchive
 =======
 
-**libarchive.js** is a JS wrapper for [libarchive](https://github.com/libarchive/libarchive), compiled with [WASMUX](https://github.com/ykbin/wasmux).
+JavaScript wrapper around the [libarchive](https://github.com/libarchive/libarchive) C library, using [WASMUX](https://github.com/ykbin/wasmux) toolchain.
 
 Usage
 -----
