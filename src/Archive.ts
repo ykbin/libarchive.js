@@ -46,13 +46,20 @@ export interface IArchiveEntry {
 
   get size(): number;
   set size(value: number);
+
+  set perm(value: number);
 };
 
 export interface IArchiveRead {
   release(): void;
 
+  get errno(): number;
+  get errorString(): string;
+
   supportFilterAll(): void;
   supportFormatAll(): void;
+
+  addPassphrase(passphrase: string): void;
 
   set onopen(callback: ArchiveOpenCallback);
   set onread(callback: ArchiveReadCallback);
@@ -68,7 +75,12 @@ export interface IArchiveRead {
 export interface IArchiveWrite {
   release(): void;
 
+  get errno(): number;
+  get errorString(): string;
+
   set format(value: string);
+  set options(options: string);
+  set passphrase(passphrase: string);
   addFilter(filter: string): void;
   setFormatFilterByExt(filename: string): void;
 

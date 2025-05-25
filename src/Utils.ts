@@ -9,17 +9,21 @@
 
 import { ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL } from "./Archive";
 
-export function utf8DataToString(buffer: ArrayBuffer, offset: number): string
+export const NO_MEMORY = "No Memory";
+
+export namespace StringExtras { 
+export function fromBuffer(buffer: ArrayBuffer, offset: number, length?: number): string
 {
-  const bytes = new Uint8Array(buffer, offset);
+  if (length === undefined) {
+    length = 0;
+    const bytes = new Uint8Array(buffer, offset);
+    while (bytes[length])
+      length++;
+  }
 
-  let length = 0;
-  while (bytes[length])
-    length++;
-
-  const decoder = new TextDecoder;
-  return decoder.decode(bytes.slice(0, length));
+  return (new TextDecoder).decode(new Uint8Array(buffer, offset, length));
 }
+} // namespace StringExtras
 
 export function errorCodeToString(code: number): string
 {
@@ -37,7 +41,7 @@ export function errorCodeToString(code: number): string
   }
 
   if (code < 0)
-    return "ARCHIVE_ERROR_" + (-code);
+    return "ARCHIVE_" + (-code);
 
-  return "ARCHIVE_NUMBER_" + code;
+  throw new Error(`Error code ${code} must be negative`);
 }

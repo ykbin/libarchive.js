@@ -27,10 +27,8 @@ export default {
     destDir: "${binaryRoot}/sysroot",
   },
 
-  "bundle:zlib": {
+  "base-configure": {
     base: "default",
-    sourceUrl: "https://www.zlib.net/zlib-1.3.1.tar.gz",
-    action: "configure",
     variables: {
       prefix: "/usr",
     },
@@ -39,7 +37,9 @@ export default {
       CXX: "clang++",
       LD: "wasm-ld",
       AR: "llvm-ar",
+      NM: "llvm-nm",
       STRIP: "llvm-strip",
+      RANLIB: "llvm-ranlib",
       CFLAGS: [
         "--target=wasm32",
         "-matomics",
@@ -56,6 +56,13 @@ export default {
         "-rtlib=libgcc",
       ],
     },
+    destDir: "${binaryRoot}/sysroot",
+  },
+
+  "bundle:zlib": {
+    base: "base-configure",
+    sourceUrl: "https://www.zlib.net/zlib-1.3.1.tar.gz",
+    action: "configure",
     destDir: "${binaryRoot}/sysroot",
   },
 
@@ -108,6 +115,25 @@ export default {
       },
     ],
     binaryDir: "${sourceDir}",
+  },
+
+  "bundle:zstd": {
+    base: "default",
+    action: "cmake",
+    generator: "Unix Makefiles",
+    sourceUrl: "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz",
+    cacheVariables: {
+      CMAKE_TOOLCHAIN_FILE: "${bundle:wasmux.destDir}/usr/share/wasmux/wasm32.toolchain.cmake",
+      CMAKE_INSTALL_PREFIX: "/usr",
+      ZSTD_BUILD_PROGRAMS: false,
+      ZSTD_BUILD_STATIC: true,
+      ZSTD_BUILD_SHARED: false,
+      ZSTD_BUILD_TESTS: false,
+      ZSTD_BUILD_CONTRIB: false,
+      ZSTD_MULTITHREAD_SUPPORT: false,
+    },
+    sourceDir: "build/cmake",
+    destDir: "${binaryRoot}/sysroot",
   },
 
   "bundle:libarchive": {

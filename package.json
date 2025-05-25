@@ -1,9 +1,9 @@
 {
   "name": "libarchive",
-  "version": "0.0.1-develop.8",
+  "version": "0.0.1-develop.9",
   "description": "Multi-format archive and compression library",
   "author": "Yurii Yakubin",
-  "homepage": "https://github.com/ykbin/libarchive.js#readme",
+  "homepage": "https://github.com/ykbin/libarchive-js#readme",
   "license": "MIT",
   "types": "./dist/libarchive.d.ts",
   "exports": {
@@ -20,7 +20,7 @@
     "licenses/libbz2.LICENSE",
     "licenses/lz4.LICENSE",
     "licenses/zlib.LICENSE",
-    "LICENSE"
+    "licenses/zstd.LICENSE"
   ],
   "keywords": [
     "archive",
@@ -46,10 +46,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ykbin/libarchive.js.git"
+    "url": "git+https://github.com/ykbin/libarchive-js.git"
   },
   "bugs": {
-    "url": "https://github.com/ykbin/libarchive.js/issues",
+    "url": "https://github.com/ykbin/libarchive-js/issues",
     "email": "yurii.yakubin@gmail.com"
   },
   "devDependencies": {

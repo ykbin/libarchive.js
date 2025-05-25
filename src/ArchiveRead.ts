@@ -9,87 +9,85 @@
 
 import { ArchiveOpenCallback, ArchiveReadCallback, ArchiveCloseCallback, IArchiveRead, ARCHIVE_OK } from "./Archive";
 import { ArchiveContext } from "./ArchiveContext";
+import { ArchiveBase } from "./ArchiveBase";
 import { ArchiveEntry } from "./ArchiveEntry";
 import { ArchiveBuffer } from "./ArchiveBuffer";
-import { errorCodeToString } from "./Utils";
+import { errorCodeToString, NO_MEMORY } from "./Utils";
 
-export class ArchiveRead implements IArchiveRead {
-  private _context: ArchiveContext;
-  private _handle: number;
-
-  public constructor(context: ArchiveContext, handle: number) {
-    this._context = context;
-    this._handle = handle;
+export class ArchiveRead extends ArchiveBase implements IArchiveRead {
+  public constructor(context: ArchiveContext, archive: number) {
+    super(context, archive);
   }
 
   public release() {
-    this._context.archive_read_free(this._handle);
-  }
-
-  public get handle() {
-    return this._handle;
+    this._context.archive_read_free(this._archive);
   }
 
   public supportFilterAll(): void {
-    return this._context.archive_read_support_filter_all(this._handle);
+    return this._context.archive_read_support_filter_all(this._archive);
   }
 
   public supportFormatAll(): void {
-    return this._context.archive_read_support_format_all(this._handle);
+    return this._context.archive_read_support_format_all(this._archive);
+  }
+
+  public addPassphrase(passphrase: string): void {
+    const passphrasePtr = this._context.archive_buffer_from(passphrase);
+    if (!passphrasePtr) throw new Error(NO_MEMORY);
+    const code = this._context.archive_read_add_passphrase(this._archive, passphrasePtr);
+    this._context.archive_buffer_free(passphrasePtr);
+    if (code != ARCHIVE_OK) {
+      throw new Error(this.errorString, { cause: errorCodeToString(code) });
+    }
   }
 
   public open(): void {
-    this._context.archive_read_open(this._handle);
+    const code = this._context.archive_read_open(this._archive);
+    if (code !== ARCHIVE_OK) {
+      throw new Error(this.errorString, { cause: errorCodeToString(code) });
+    }
   }
 
   public close(): void {
-    this._context.archive_read_close(this._handle);
+    this._context.archive_read_close(this._archive);
   }
 
   public nextHeader(): ArchiveEntry | undefined {
-    const entry = this._context.archive_read_next_header(this._handle);
+    const entry = this._context.archive_read_next_header(this._archive);
     if (entry)
       return new ArchiveEntry(this._context, entry);
 
-    const code = this._context.archive_read_last_error(this._handle);
-    if (code === ARCHIVE_OK)
-      return;
-
-    const message = this._context.archive_error_string(this._handle);
-    const cause = errorCodeToString(code);
-    throw new Error(message, { cause });
+    const code = this._context.archive_read_last_error(this._archive);
+    if (code !== ARCHIVE_OK) {
+      throw new Error(this.errorString, { cause: errorCodeToString(code) });
+    }
   }
 
   public dataRead(buffer: ArchiveBuffer, offset?: number, length?: number): number {
     offset = buffer.byteOffset + (offset || 0);
     length = length || buffer.byteLength;
 
-    const n = this._context.archive_read_data(this._handle, offset, length);
-    if (n >= 0)
-      return n;
-
-    const message = this._context.archive_error_string(this._handle);
-    const cause = errorCodeToString(n);
-    throw new Error(message, { cause });
+    const n = this._context.archive_read_data(this._archive, offset, length);
+    if (n < 0) {
+      throw new Error(this.errorString, { cause: errorCodeToString(n) });
+    }
+    
+    return n;
   }
 
   public dataSkip(): number {
-    return this._context.archive_read_data_skip(this._handle);
+    return this._context.archive_read_data_skip(this._archive);
   }
 
   public set onopen(callback: ArchiveOpenCallback) {
-    this._context.archive_read_set_open_callback(this._handle, callback);
+    this._context.archive_read_set_open_callback(this._archive, callback);
   }
 
   public set onread(callback: ArchiveReadCallback) {
-    this._context.archive_read_set_read_callback(this._handle, callback);
+    this._context.archive_read_set_read_callback(this._archive, callback);
   }
 
   public set onclose(callback: ArchiveCloseCallback) {
-    this._context.archive_read_set_close_callback(this._handle, callback);
+    this._context.archive_read_set_close_callback(this._archive, callback);
   }
-
-  // handleEvent
-  // addEventListner
-  // removeEventListener
 };

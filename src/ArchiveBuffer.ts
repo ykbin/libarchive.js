@@ -26,7 +26,7 @@ export class ArchiveBuffer implements IArchiveBuffer {
   }
 
   get buffer(): ArrayBuffer {
-    return this._context.memory.buffer;
+    return this._context.memoryBuffer;
   }
 
   get byteOffset(): number {
