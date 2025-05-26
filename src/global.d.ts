@@ -18,3 +18,15 @@ declare const PROJECT_DESCRIPTION: string;
 
 // The URL to the project's homepage
 declare const PROJECT_HOMEPAGE_URL: string;
+
+// Main library filename
+declare const LIBARCHIVE_MAIN_FILENAME: string;
+
+// Node library filename
+declare const LIBARCHIVE_NODE_FILENAME: string;
+
+// Command line script filename
+declare const LIBARCHIVE_CLI_FILENAME: string;
+
+// WebAssembly binary filename
+declare const LIBARCHIVE_WASM_FILENAME: string;

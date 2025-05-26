@@ -77,10 +77,12 @@ export type ArchiveReadCallback = () => Buffer | undefined;
 export type ArchiveWriteCallback = (buffer: IArchiveBuffer) => void;
 export type CompressOptions = {
 	verbose?: boolean;
+	moduleUrl?: string;
 	directory?: string;
 };
 export type DecompressOptions = {
 	verbose?: boolean;
+	moduleUrl?: string;
 };
 
 export {

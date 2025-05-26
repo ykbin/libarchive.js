@@ -101,10 +101,12 @@ export interface IArchive {
 
 export type DecompressOptions = {
   verbose?: boolean;
+  moduleUrl?: string;
 };
 
 export type CompressOptions = {
   verbose?: boolean;
+  moduleUrl?: string;
   directory?: string;
 };
 

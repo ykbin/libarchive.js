@@ -7,7 +7,7 @@ module.exports = {
   entries: [
     {
       filePath: "./src/MainLibrary.ts",
-      outFile: "./dist/libarchive.d.ts",
+      outFile: pkg.types,
       failOnClass: true,
       output: {
         inlineDeclareGlobals: false,

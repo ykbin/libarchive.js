@@ -21,12 +21,7 @@ export interface IDecompressCallbacks {
   fileEntry(entry: EntryInfo): IDataWriter | Promise<IDataWriter>;
 };
 
-export async function decompress(context: IArchive, input: string | Buffer, callbacks: IDecompressCallbacks): Promise<void> {
-  if (typeof input === "string") {
-    const response = await fetch(input);
-    input = Buffer.from(await response.arrayBuffer());
-  }
-
+export async function decompress(context: IArchive, input: Buffer, callbacks: IDecompressCallbacks): Promise<void> {
   const archive = context.newRead();
 
   archive.supportFilterAll();

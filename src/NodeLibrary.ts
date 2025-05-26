@@ -7,6 +7,8 @@
  * under the MIT License. See LICENSE file for details.
  */
 
+/// <reference path="global.d.ts" />
+
 import path from "node:path";
 import fs from "node:fs";
 
@@ -18,15 +20,18 @@ import { getScriptDirectory, PathSep, getFileStats, MkdirCache } from "./FileSys
 import { ArchiveOperations } from "./ArchiveOperations";
 import url from "node:url";
 
-async function newArchiveContext(params: string | Buffer): Promise<IArchive> {
-  if (typeof params === "string") {
-    params = await fs.promises.readFile(params);
-    return Archive.instantiate(params);
+async function fetchBuffer(str: string): Promise<Buffer> {
+  if (!(str.startsWith("http://") || str.startsWith("https://"))) {
+    const filepath = str.startsWith("file://") ? url.fileURLToPath(str) : str;
+    return await fs.promises.readFile(filepath);
   }
-  else if (!(params instanceof Buffer)) {
-    throw Error(`Not supported parameter ${params}`);
-  }
+  const response = await fetch(str);
+  return Buffer.from(await response.arrayBuffer());
+}
 
+async function newArchiveContext(params: string | Buffer): Promise<IArchive> {
+  if (typeof params === "string")
+    params = await fetchBuffer(params);
   return Archive.instantiate(params);
 }
 
@@ -37,7 +42,7 @@ async function getArchiveContext(params?: string | Buffer): Promise<IArchive> {
   }
 
   if (!g_archive) {
-    const filename = path.join(getScriptDirectory(), "libarchive.wasm");
+    const filename = path.join(getScriptDirectory(), LIBARCHIVE_WASM_FILENAME);
     g_archive = await newArchiveContext(filename);
   }
 
@@ -63,10 +68,8 @@ const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
   async decompress(input: string | Buffer, output?: string, options?: DecompressOptions): Promise<void> {
     const verbose = options && options.verbose;
 
-    if (typeof input === "string" && !input.startsWith("http://") && !input.startsWith("https://")) {
-      if (input.startsWith("file://"))
-        input = url.fileURLToPath(input);
-      input = await fs.promises.readFile(input);
+    if (typeof input === "string") {
+      input = await fetchBuffer(input);
     }
 
     const outputDir = path.resolve(output ? PathSep.representPathAsNative(output) : "");
@@ -104,7 +107,8 @@ const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
       },
     };
 
-    return ArchiveOperations.decompress(await getArchiveContext(), input, callbacks);
+    const context = await getArchiveContext(options?.moduleUrl);
+    return ArchiveOperations.decompress(context, input, callbacks);
   },
 
   async compress(input: string | string[], output: string, options?: CompressOptions): Promise<void> {
@@ -162,7 +166,9 @@ const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
         return bytesWritten;
       },
     };
-    const result = await ArchiveOperations.compress(await getArchiveContext(), callbacks, output);
+
+    const context = await getArchiveContext(options?.moduleUrl);
+    const result = await ArchiveOperations.compress(context, callbacks, output);
     await outputHandle.close();
     return result;
   },
