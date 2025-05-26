@@ -85,30 +85,30 @@ export default async (env, argv) => {
     config.entry = {
       "libarchive": "./src/MainLibrary.ts",
     };
-  }
-
-  if (process.env.npm_config_build_target === "node") {
-    config.target = "node";
-    config.entry["libarchive-node"] = "./src/NodeLibrary.ts";
-    config.externals["libarchive"] = "commonjs2 ./libarchive.js";
     config.output.library = {
       name: "libarchive",
       type: "commonjs2",
     };
     config.output.libraryTarget = "umd";
     config.output.libraryExport = "default";
+  }
+
+  if (process.env.npm_config_build_target === "node") {
+    config.target = "node";
+    config.entry["libarchive-node"] = "./src/NodeLibrary.ts";
+    config.output.library = {
+      name: "libarchive",
+      type: "commonjs2",
+    };
+    config.output.libraryTarget = "umd";
+    config.output.libraryExport = "default";
+    config.externals["libarchive"] = "commonjs2 ./libarchive.js";
   }
 
   if (process.env.npm_config_build_target === "cli") {
     config.target = "node";
     config.entry["libarchive-cli"] = "./src/NodeProgram.ts";
     config.externals["libarchive/node"] = "commonjs2 ./libarchive-node.js";
-    config.output.library = {
-      name: "libarchive",
-      type: "commonjs2",
-    };
-    config.output.libraryTarget = "umd";
-    config.output.libraryExport = "default";
     config.plugins.push(new webpack.BannerPlugin({
       banner: "#!/usr/bin/env node",
       raw: true,

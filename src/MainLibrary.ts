@@ -41,10 +41,12 @@ const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
   AE_IFIFO,
 
   async decompress(input: string | Buffer, output?: string, options?: DecompressOptions): Promise<void> {
+    console.log("IArchiveExport.decompress");
     //return ArchiveOperations.decompress(webFs, await newArchiveContext(), input, output, options);
   },
 
   async compress(input: string | string[], output: string, options?: CompressOptions): Promise<void> {
+    console.log("IArchiveExport.compress");
     //return ArchiveOperations.compress(webFs, await newArchiveContext(), input, output, options);
   },
 });
