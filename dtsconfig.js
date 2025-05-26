@@ -6,7 +6,7 @@ module.exports = {
   },
   entries: [
     {
-      filePath: "./src/index.ts",
+      filePath: "./src/MainLibrary.ts",
       outFile: "./dist/libarchive.d.ts",
       failOnClass: true,
       output: {

@@ -49,12 +49,12 @@ export interface ArchiveNative extends WebAssembly.Exports {
   archive_entry_pathname_w(entry: ArchiveEntryPtr): number;
   archive_entry_pathname_utf8(entry: ArchiveEntryPtr): number;
   archive_entry_set_pathname_utf8(entry: ArchiveEntryPtr, pathname: StringPtr): void;
-  archive_entry_filetype(entry: ArchiveEntryPtr): StringPtr;
-  archive_entry_set_filetype(entry: ArchiveEntryPtr, filetype: StringPtr): void;
   archive_entry_size_lo(entry: ArchiveEntryPtr): number;
   archive_entry_size_hi(entry: ArchiveEntryPtr): number;
   archive_entry_set_size(entry: ArchiveEntryPtr, hi: number, lo: number): void;
-  archive_entry_set_perm(entry: ArchiveEntryPtr, mode: number): void;
+  archive_entry_size_is_set(entry: ArchiveEntryPtr): number;
+  archive_entry_mode(entry: ArchiveEntryPtr): number;
+  archive_entry_set_mode(entry: ArchiveEntryPtr, mode: number): void;
 
   archive_buffer_new(length: number): number;
   archive_buffer_free(offset: number): void;

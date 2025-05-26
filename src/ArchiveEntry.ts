@@ -42,23 +42,20 @@ export class ArchiveEntry implements IArchiveEntry {
     this._context.archive_entry_set_pathname_utf8(this._entry, pathnamePtr);
   }
 
-  public get filetype(): number {
-    return this._context.archive_entry_filetype(this._entry);
-  }
-
-  public set filetype(value: number) {
-    this._context.archive_entry_set_filetype(this._entry, value);
-  }
-
-  public get size(): number {
-    return this._context.archive_entry_size(this._entry);
+  public get size(): number | undefined {
+    if (this._context.archive_entry_size_is_set(this._entry))
+      return this._context.archive_entry_size(this._entry);
   }
 
   public set size(value: number) {
     this._context.archive_entry_set_size(this._entry, value);
   }
 
-  public set perm(value: number) {
-    this._context.archive_entry_set_perm(this._entry, value);
+  public get mode(): number {
+    return this._context.archive_entry_mode(this._entry);
+  }
+
+  public set mode(mode: number) {
+    this._context.archive_entry_set_mode(this._entry, mode);
   }
 };

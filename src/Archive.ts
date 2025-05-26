@@ -41,13 +41,11 @@ export interface IArchiveEntry {
   get pathname(): string | undefined;
   set pathname(value: string);
 
-  get filetype(): number;
-  set filetype(filetype: number);
-
-  get size(): number;
+  get size(): number | undefined;
   set size(value: number);
 
-  set perm(value: number);
+  get mode(): number;
+  set mode(mode: number);
 };
 
 export interface IArchiveRead {
@@ -99,4 +97,41 @@ export interface IArchive {
   newWrite(): IArchiveWrite;
   newEntry(): IArchiveEntry;
   newBuffer(length: number): IArchiveBuffer;
+};
+
+export type DecompressOptions = {
+  verbose?: boolean;
+};
+
+export type CompressOptions = {
+  verbose?: boolean;
+  directory?: string;
+};
+
+export interface EntryInfo {
+  pathname: string;
+  mode: number;
+  size?: number;
+};
+
+export interface IArchiveExport {
+  (params?: string | Buffer): Promise<IArchive>;
+
+  readonly ARCHIVE_OK: number;
+  readonly ARCHIVE_RETRY: number;
+  readonly ARCHIVE_WARN: number;
+  readonly ARCHIVE_FAILED: number;
+  readonly ARCHIVE_FATAL: number;
+
+  readonly AE_IFMT: number;
+  readonly AE_IFREG: number;
+  readonly AE_IFLNK: number;
+  readonly AE_IFSOCK: number;
+  readonly AE_IFCHR: number;
+  readonly AE_IFBLK: number;
+  readonly AE_IFDIR: number;
+  readonly AE_IFIFO: number;
+
+  decompress(input: string | Buffer, output?: string, options?: DecompressOptions): Promise<void>;
+  compress(input: string | string[], output: string, options?: CompressOptions): Promise<void>;
 };

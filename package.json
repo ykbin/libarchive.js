@@ -1,13 +1,16 @@
 {
   "name": "libarchive",
-  "version": "0.0.1-develop.9",
+  "version": "0.0.1-develop.10",
   "description": "Multi-format archive and compression library",
   "author": "Yurii Yakubin",
   "homepage": "https://github.com/ykbin/libarchive-js#readme",
   "license": "MIT",
+  "main": "./dist/libarchive.js",
   "types": "./dist/libarchive.d.ts",
   "exports": {
     ".": "./dist/libarchive.js",
+    "./node": "./dist/libarchive-node.js",
+    "./cli": "./dist/libarchive-cli.js",
     "./wasm": "./dist/libarchive.wasm"
   },
   "bin": {
@@ -41,8 +44,16 @@
   ],
   "scripts": {
     "build:types": "dts-bundle-generator --config dtsconfig.js",
-    "build:debug": "webpack --config webpack.config.mjs --mode development",
-    "build:release": "webpack --config webpack.config.mjs --mode production"
+    "build:base:debug": "webpack --config webpack.config.mjs --mode development",
+    "build:base:release": "webpack --config webpack.config.mjs --mode production",
+    "build:main:debug": "npm run build:base:debug --build-target=main",
+    "build:main:release": "npm run build:base:release --build-target=main",
+    "build:node:debug": "npm run build:base:debug --build-target=node",
+    "build:node:release": "npm run build:base:release --build-target=node",
+    "build:cli:debug": "npm run build:base:debug --build-target=cli",
+    "build:cli:release": "npm run build:base:release --build-target=cli",
+    "build:debug": "npm run build:main:debug && npm run build:node:debug && npm run build:cli:debug && npm run build:types",
+    "build:release": "npm run build:main:release && npm run build:node:release && npm run build:cli:release && npm run build:types"
   },
   "repository": {
     "type": "git",

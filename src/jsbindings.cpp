@@ -276,18 +276,6 @@ const wchar_t* __archive_entry_pathname_w(struct archive_entry* entry)
   return archive_entry_pathname_w(entry);
 }
 
-__ATTR_EXPORT_NAME("archive_entry_filetype")
-int __archive_entry_filetype(struct archive_entry* entry)
-{
-  return archive_entry_filetype(entry);
-}
-
-__ATTR_EXPORT_NAME("archive_entry_set_filetype")
-void __archive_entry_set_filetype(struct archive_entry* entry, unsigned filetype)
-{
-  archive_entry_set_filetype(entry, filetype);
-}
-
 __ATTR_EXPORT_NAME("archive_entry_size_lo")
 unsigned __archive_entry_size_lo(struct archive_entry* entry)
 {
@@ -306,16 +294,28 @@ void __archive_entry_set_size(struct archive_entry* entry, unsigned hi, unsigned
   archive_entry_set_size(entry, static_cast<la_int64_t>(hi) << 32 | lo);
 }
 
+__ATTR_EXPORT_NAME("archive_entry_size_is_set")
+int __archive_entry_size_is_set(struct archive_entry* entry)
+{
+  return archive_entry_size_is_set(entry);
+}
+
 __ATTR_EXPORT_NAME("archive_entry_set_pathname_utf8")
 void __archive_entry_set_pathname_utf8(struct archive_entry* entry, const char* name)
 {
   archive_entry_set_pathname_utf8(entry, name);
 }
 
-__ATTR_EXPORT_NAME("archive_entry_set_perm")
-void __archive_entry_set_perm(struct archive_entry* entry, mode_t mode)
+__ATTR_EXPORT_NAME("archive_entry_mode")
+unsigned __archive_entry_mode(struct archive_entry* entry)
 {
-  archive_entry_set_perm(entry, mode);
+  return archive_entry_mode(entry);
+}
+
+__ATTR_EXPORT_NAME("archive_entry_set_mode")
+void __archive_entry_mode(struct archive_entry* entry, unsigned mode)
+{
+  archive_entry_set_mode(entry, mode);
 }
 
 __ATTR_EXPORT_NAME("archive_buffer_new")

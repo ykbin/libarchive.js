@@ -10,7 +10,7 @@
 /// <reference path="global.d.ts" />
 
 // @ts-ignore
-import libarchive from "libarchive";
+import libarchive from "libarchive/node";
 
 const _O = (sopt: string, lopt: string, arg: string | null, desc: string) => ({sopt, lopt, arg, desc});
 

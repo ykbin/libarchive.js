@@ -17,6 +17,38 @@ export function getScriptDirectory() {
   return null;
 }
 
+export interface IFileHandle {
+  read(buffer: Uint8Array): Promise<{ bytesRead: number}>;
+  write(buffer: Uint8Array): Promise<{ bytesWritten: number }>;
+  close(): Promise<void>;
+};
+
+export interface IFileSystem {
+  mkdir(path: string, options: { recursive: boolean }): Promise<string | undefined>;
+  open(path: string, flags?: string | number, mode?: number): Promise<IFileHandle>;
+  readFile(path: string): Promise<Buffer>;
+};
+
+export namespace FileSystem {
+export function createNode(options?: { withMkdirCache?: boolean, currentDir?: string }): IFileSystem
+{
+  const hostFs: IFileSystem = {
+    mkdir: fs.promises.mkdir,
+    open: fs.promises.open,
+    readFile: fs.promises.readFile,
+  };
+
+  if(options?.withMkdirCache) {
+    const mkdirCache = new MkdirCache;
+    hostFs.mkdir = (dirPath: string, options: { recursive: boolean }): Promise<string | undefined> => {
+      return mkdirCache.mkdir(dirPath, options);
+    };
+  }
+
+  return hostFs;
+}
+} // namespace FileSystem
+
 export namespace PathSep {
 
 type SepPair =  [ first: string, second: string ];
@@ -55,13 +87,17 @@ export function representPathAsWin32(inputPath: string) {
 } // namespace
 
 export class MkdirCache {
-  private _dirSet = new Set<string>;
+  private _dirMap = new Map<string, string | null>;
   
-  public async mkdir(dirPath: string) {
-    if (!this._dirSet.has(dirPath)) {
-      await fs.promises.mkdir(dirPath, { recursive: true });
-      this._dirSet.add(dirPath);
+  public async mkdir(dirPath: string, options?: { recursive: boolean }) {
+    let result = this._dirMap.get(dirPath);
+    if (result === null)
+      return undefined;
+    if (result === undefined) {
+      result = await fs.promises.mkdir(dirPath, options);
+      this._dirMap.set(dirPath, (result === undefined) ? null : result);
     }
+    return result;
   }
 };
 

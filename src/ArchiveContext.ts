@@ -260,14 +260,6 @@ export class ArchiveContext {
     this._native.archive_entry_set_pathname_utf8(entry, pathname);
   }
 
-  public archive_entry_filetype(entry: ArchiveEntryPtr): number {
-    return this._native.archive_entry_filetype(entry);
-  }
-
-  public archive_entry_set_filetype(entry: ArchiveEntryPtr, filetype: number): void {
-    this._native.archive_entry_set_filetype(entry, filetype);
-  }
-
   public archive_entry_size(entry: ArchiveEntryPtr): number {
     const lo = this._native.archive_entry_size_lo(entry);
     const hi = this._native.archive_entry_size_hi(entry);
@@ -278,8 +270,16 @@ export class ArchiveContext {
     this._native.archive_entry_set_size(entry, 0, size);
   }
 
-  public archive_entry_set_perm(entry: ArchiveEntryPtr, mode: number): void {
-    this._native.archive_entry_set_perm(entry, mode);
+  public archive_entry_size_is_set(entry: ArchiveEntryPtr): number {
+    return this._native.archive_entry_size_is_set(entry);
+  }
+
+  public archive_entry_mode(entry: ArchiveEntryPtr): number {
+    return this._native.archive_entry_mode(entry);
+  }
+
+  public archive_entry_set_mode(entry: ArchiveEntryPtr, mode: number): void {
+    this._native.archive_entry_set_mode(entry, mode);
   }
 
   public archive_buffer_new(size: number): number {

@@ -11,7 +11,7 @@ $> npm install libarchive
 ```
 
 ```js
-import libarchive from "libarchive";
+import libarchive from "libarchive/node";
 
 await libarchive.compress([ "dir", "file" ], "archive.zip");
 await libarchive.decompress("archive.zip", "dist");

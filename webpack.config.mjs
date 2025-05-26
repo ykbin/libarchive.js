@@ -23,8 +23,6 @@ async function readJSON(filename) {
 
 export default async (env, argv) => {
   const isDevelopment = (argv.mode === "development");
-  const mode = isDevelopment ? "development" : "production";
-  const devtool = isDevelopment ? "inline-source-map" : undefined;
   const tsconfig = isDevelopment ? "tsconfig.dev.json" : "tsconfig.json";
 
   const pkg = await readJSON(path.join(__dirname, "package.json"));
@@ -36,38 +34,17 @@ export default async (env, argv) => {
   };
 
   const outputPath = path.resolve(__dirname, "dist");
-  const resolve = {
-    extensions: [ ".ts", ".tsx", ".mjs", ".js" ],
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-    },
-  };
 
-  const module = {
-    rules: [
-      {
-        test: /\.tsx?$/,
-        exclude: /node_modules/,
-        use: [
-          {
-            loader: "ts-loader",
-            options: {
-              configFile: path.join(__dirname, tsconfig),
-            }
-          }
-        ],
+  const config = {
+    mode: isDevelopment ? "development" : "production",
+    devtool: isDevelopment ? "inline-source-map" : undefined,
+    resolve: {
+      extensions: [ ".ts", ".tsx", ".mjs", ".js" ],
+      alias: {
+        "@": path.resolve(__dirname, "src"),
       },
-    ],
-  };
-
-  const libConfig = {
-    mode,
-    devtool,
-    resolve,
-    target: 'node',
-    entry: {
-      "libarchive": "./src/index.ts",
     },
+    entry: {},
     output: {
       path: outputPath,
       filename: '[name].js',
@@ -78,36 +55,65 @@ export default async (env, argv) => {
       libraryTarget: "umd",
       libraryExport: "default",
     },
-    module,
-    plugins: [
-      new webpack.DefinePlugin(globalVariables),
-    ],
-  };
-
-  const cliConfig = {
-    mode,
-    devtool,
-    resolve,
-    target: 'node',
-    entry: {
-      "libarchive-cli": "./src/main.ts",
+    module: {
+      rules: [
+        {
+          test: /\.tsx?$/,
+          exclude: /node_modules/,
+          use: [
+            {
+              loader: "ts-loader",
+              options: {
+                configFile: path.join(__dirname, tsconfig),
+              }
+            }
+          ],
+        },
+      ],
     },
     output: {
       path: outputPath,
       filename: "[name].js",
     },
-    module,
+    externals: {},
     plugins: [
       new webpack.DefinePlugin(globalVariables),
-      new webpack.BannerPlugin({
-        banner: "#!/usr/bin/env node",
-        raw: true,
-      }),
     ],
-    externals: {
-      "libarchive": "commonjs2 ./libarchive.js",
-    },
   };
 
-  return [ libConfig, cliConfig ];
+  if (process.env.npm_config_build_target === "main") {
+    config.entry = {
+      "libarchive": "./src/MainLibrary.ts",
+    };
+  }
+
+  if (process.env.npm_config_build_target === "node") {
+    config.target = "node";
+    config.entry["libarchive-node"] = "./src/NodeLibrary.ts";
+    config.externals["libarchive"] = "commonjs2 ./libarchive.js";
+    config.output.library = {
+      name: "libarchive",
+      type: "commonjs2",
+    };
+    config.output.libraryTarget = "umd";
+    config.output.libraryExport = "default";
+  }
+
+  if (process.env.npm_config_build_target === "cli") {
+    config.target = "node";
+    config.entry["libarchive-cli"] = "./src/NodeProgram.ts";
+    config.externals["libarchive/node"] = "commonjs2 ./libarchive-node.js";
+    config.output.library = {
+      name: "libarchive",
+      type: "commonjs2",
+    };
+    config.output.libraryTarget = "umd";
+    config.output.libraryExport = "default";
+    config.plugins.push(new webpack.BannerPlugin({
+      banner: "#!/usr/bin/env node",
+      raw: true,
+    }));
+  };
+
+  return config;
 }

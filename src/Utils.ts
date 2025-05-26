@@ -21,7 +21,7 @@ export function fromBuffer(buffer: ArrayBuffer, offset: number, length?: number)
       length++;
   }
 
-  return (new TextDecoder).decode(new Uint8Array(buffer, offset, length));
+  return (new TextDecoder("utf-8")).decode(new Uint8Array(buffer, offset, length));
 }
 } // namespace StringExtras
 
