@@ -12,7 +12,7 @@ import { ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL 
 export const NO_MEMORY = "No Memory";
 
 export namespace StringExtras { 
-export function fromBuffer(buffer: ArrayBuffer, offset: number, length?: number): string
+export function fromBuffer(buffer: ArrayBuffer | SharedArrayBuffer, offset: number, length?: number): string
 {
   let bytes: Uint8Array;
 
