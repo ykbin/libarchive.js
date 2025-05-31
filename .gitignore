@@ -2,7 +2,7 @@
 /priv
 
 # Dist directory
-# /dist
+/dist
 
 # Dist directory
 /build

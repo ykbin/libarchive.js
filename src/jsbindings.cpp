@@ -10,6 +10,7 @@
 #include <wasmux/compiler.h>
 
 #include <stdlib.h>
+#include <locale.h>
 
 #include <archive.h>
 #include <archive_entry.h>
@@ -50,6 +51,12 @@ __ATTR_EXPORT_NAME("archive_version_details")
 const char* __archive_version_details()
 {
   return archive_version_details();
+}
+
+__ATTR_EXPORT_NAME("archive_setlocale")
+const char* __archive_setlocale(const char* name)
+{
+  return setlocale(LC_ALL, name);
 }
 
 __ATTR_EXPORT_NAME("archive_errno")
@@ -264,16 +271,22 @@ void __archive_entry_free(struct archive_entry* entry)
   archive_entry_free(entry);
 }
 
-__ATTR_EXPORT_NAME("archive_entry_pathname_utf8")
-const char* __archive_entry_pathname_utf8(struct archive_entry* entry)
+__ATTR_EXPORT_NAME("archive_entry_pathname")
+const char* __archive_entry_pathname(struct archive_entry* entry)
 {
-  return archive_entry_pathname_utf8(entry);
+  return archive_entry_pathname(entry);
 }
 
 __ATTR_EXPORT_NAME("archive_entry_pathname_w")
 const wchar_t* __archive_entry_pathname_w(struct archive_entry* entry)
 {
   return archive_entry_pathname_w(entry);
+}
+
+__ATTR_EXPORT_NAME("archive_entry_pathname_utf8")
+const char* __archive_entry_pathname_utf8(struct archive_entry* entry)
+{
+  return archive_entry_pathname_utf8(entry);
 }
 
 __ATTR_EXPORT_NAME("archive_entry_size_lo")

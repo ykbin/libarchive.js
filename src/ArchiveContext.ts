@@ -69,6 +69,10 @@ export class ArchiveContext {
     return this._native.archive_version_details();
   }
 
+  public archive_setlocale(name: number): number {
+    return this._native.archive_setlocale(name);
+  }
+
   public archive_errno(archive: number): number {
     return this._native.archive_errno(archive);
   }
@@ -250,6 +254,14 @@ export class ArchiveContext {
 
   public archive_entry_free(entry: ArchiveEntryPtr) {
     this._native.archive_entry_free(entry);
+  }
+
+  public archive_entry_pathname(entry: ArchiveEntryPtr): number {
+    return this._native.archive_entry_pathname(entry);
+  }
+
+  public archive_entry_pathname_w(entry: ArchiveEntryPtr): number {
+    return this._native.archive_entry_pathname_w(entry);
   }
 
   public archive_entry_pathname_utf8(entry: ArchiveEntryPtr): number {

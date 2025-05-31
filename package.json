@@ -69,6 +69,6 @@
     "typescript": "^5.8.3",
     "webpack": "^5.99.5",
     "webpack-cli": "^6.0.1",
-    "wasmux": "github:ykbin/wasmux#20250519_dev5"
+    "wasmux": "^0.0.3-develop.5"
   }
 }

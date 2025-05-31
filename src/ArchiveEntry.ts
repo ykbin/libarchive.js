@@ -30,7 +30,11 @@ export class ArchiveEntry implements IArchiveEntry {
   }
 
   public get pathname(): string | undefined {
-    const pathnamePtr = this._context.archive_entry_pathname_utf8(this._entry);
+    const pathnameUTF8Ptr = this._context.archive_entry_pathname_utf8(this._entry);
+    if (pathnameUTF8Ptr) {
+      return StringExtras.fromBuffer(this._context.memoryBuffer, pathnameUTF8Ptr);
+    }
+    const pathnamePtr = this._context.archive_entry_pathname(this._entry);
     if (pathnamePtr) {
       return StringExtras.fromBuffer(this._context.memoryBuffer, pathnamePtr);
     }

@@ -16,6 +16,7 @@ export interface ArchiveNative extends WebAssembly.Exports {
 
   archive_version(): StringPtr;
   archive_version_details(): StringPtr;
+  archive_setlocale(name: StringPtr): StringPtr;
 
   archive_errno(archive: number): number;
   archive_error_string(archive: number): StringPtr;
@@ -46,6 +47,7 @@ export interface ArchiveNative extends WebAssembly.Exports {
 
   archive_entry_new(): ArchiveEntryPtr;
   archive_entry_free(entry: ArchiveEntryPtr): void;
+  archive_entry_pathname(entry: ArchiveEntryPtr): number;
   archive_entry_pathname_w(entry: ArchiveEntryPtr): number;
   archive_entry_pathname_utf8(entry: ArchiveEntryPtr): number;
   archive_entry_set_pathname_utf8(entry: ArchiveEntryPtr, pathname: StringPtr): void;

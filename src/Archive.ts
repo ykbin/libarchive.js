@@ -93,6 +93,11 @@ export interface IArchiveWrite {
 };
 
 export interface IArchive {
+  get version(): string;
+  get versionDetails(): string;
+
+  setlocale(name: string): string | undefined;
+
   newRead(): IArchiveRead;
   newWrite(): IArchiveWrite;
   newEntry(): IArchiveEntry;
@@ -102,11 +107,13 @@ export interface IArchive {
 export type DecompressOptions = {
   verbose?: boolean;
   moduleUrl?: string;
+  locale?: string;
 };
 
 export type CompressOptions = {
   verbose?: boolean;
   moduleUrl?: string;
+  locale?: string;
   directory?: string;
 };
 

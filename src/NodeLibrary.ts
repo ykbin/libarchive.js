@@ -11,6 +11,7 @@
 
 import path from "node:path";
 import fs from "node:fs";
+import url from "node:url";
 
 import { IArchive, IArchiveExport, DecompressOptions, CompressOptions, EntryInfo } from "./Archive";
 import { Archive } from "./ArchiveImpl";
@@ -18,7 +19,6 @@ import { ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL 
 import { AE_IFMT, AE_IFREG, AE_IFLNK, AE_IFSOCK, AE_IFCHR, AE_IFBLK, AE_IFDIR, AE_IFIFO } from "./Archive";
 import { getScriptDirectory, PathSep, getFileStats, MkdirCache } from "./FileSystem";
 import { ArchiveOperations } from "./ArchiveOperations";
-import url from "node:url";
 
 async function fetchBuffer(str: string): Promise<Buffer> {
   if (!(str.startsWith("http://") || str.startsWith("https://"))) {
@@ -47,6 +47,18 @@ async function getArchiveContext(params?: string | Buffer): Promise<IArchive> {
   }
 
   return g_archive;
+}
+
+function setlocale(context: IArchive, name?: string, verbose?: boolean) {
+  if (name === undefined)
+    name = process.env.LANG || process.env.LANGUAGE || process.env.LC_ALL || process.env.LC_MESSAGES;
+
+  if (name !== undefined) {
+    const result = context.setlocale(name);
+    if (verbose && result === undefined) {
+      console.warn(`Unable to set locale ${name}`);
+    }
+  }
 }
 
 const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
@@ -108,6 +120,7 @@ const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
     };
 
     const context = await getArchiveContext(options?.moduleUrl);
+    setlocale(context, options?.locale, options?.verbose);
     return ArchiveOperations.decompress(context, input, callbacks);
   },
 
@@ -168,6 +181,7 @@ const libarchive: IArchiveExport = Object.assign(getArchiveContext, {
     };
 
     const context = await getArchiveContext(options?.moduleUrl);
+    setlocale(context, options?.locale, options?.verbose);
     const result = await ArchiveOperations.compress(context, callbacks, output);
     await outputHandle.close();
     return result;
