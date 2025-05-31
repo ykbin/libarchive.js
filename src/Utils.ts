@@ -12,16 +12,25 @@ import { ARCHIVE_OK, ARCHIVE_RETRY, ARCHIVE_WARN, ARCHIVE_FAILED, ARCHIVE_FATAL 
 export const NO_MEMORY = "No Memory";
 
 export namespace StringExtras { 
-export function fromBuffer(buffer: ArrayBuffer, offset: number, length?: number): string
+export function fromBuffer(buffer: ArrayBuffer | SharedArrayBuffer, offset: number, length?: number): string
 {
+  let bytes: Uint8Array;
+
   if (length === undefined) {
     length = 0;
-    const bytes = new Uint8Array(buffer, offset);
+    bytes = new Uint8Array(buffer, offset);
     while (bytes[length])
       length++;
   }
 
-  return (new TextDecoder).decode(new Uint8Array(buffer, offset, length));
+  bytes = new Uint8Array(buffer, offset, length);
+  if (buffer instanceof SharedArrayBuffer) {
+    const copyBytes = new Uint8Array(length);
+    copyBytes.set(bytes);
+    bytes = copyBytes;
+  }
+
+  return (new TextDecoder("utf-8")).decode(bytes);
 }
 } // namespace StringExtras
 

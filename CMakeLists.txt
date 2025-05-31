@@ -5,12 +5,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 include(GNUInstallDirs)
 
-find_package(Threads)
-if (Threads_FOUND AND CMAKE_USE_PTHREADS_INIT)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-endif ()
-
 find_package(ZLIB REQUIRED)
 find_package(LZ4 REQUIRED)
 find_package(BZip2 REQUIRED)
@@ -27,7 +21,6 @@ set(libarchive_INCLUDES
   )
 
 set(libarchive_LIBRARIES
-  Threads::Threads
   ZLIB::ZLIB
   LZ4::LZ4
   BZip2::BZip2

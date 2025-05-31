@@ -41,6 +41,14 @@ export class Archive implements IArchive {
     return this._versionDetails;
   }
 
+  public setlocale(name: string): string | undefined {
+    const namePtr = this._context.archive_buffer_from(name);
+    if (!namePtr) throw new Error(NO_MEMORY);
+    const resultPtr = this._context.archive_setlocale(namePtr);
+    if (resultPtr)
+      return StringExtras.fromBuffer(this._context.memoryBuffer, resultPtr);
+  }
+
   public newRead(): ArchiveRead {
     const archive_read = this._context.archive_read_new();
     if (!archive_read)
