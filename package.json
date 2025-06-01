@@ -1,6 +1,6 @@
 {
   "name": "libarchive",
-  "version": "0.0.1-develop.10",
+  "version": "0.0.1-develop.11",
   "description": "Multi-format archive and compression library",
   "author": "Yurii Yakubin",
   "homepage": "https://github.com/ykbin/libarchive-js#readme",
@@ -23,7 +23,12 @@
     "licenses/libbz2.LICENSE",
     "licenses/lz4.LICENSE",
     "licenses/zlib.LICENSE",
-    "licenses/zstd.LICENSE"
+    "licenses/zstd.LICENSE",
+    "licenses/xz.COPYING",
+    "licenses/COPYING.0BSD",
+    "licenses/COPYING.GPLv2",
+    "licenses/COPYING.GPLv3",
+    "licenses/COPYING.LGPLv2.1"
   ],
   "keywords": [
     "archive",
@@ -37,6 +42,8 @@
     "tgz",
     "untar",
     "lz4",
+    "lzma",
+    "xz",
     "cpio",
     "extract",
     "compress",
@@ -69,6 +76,6 @@
     "typescript": "^5.8.3",
     "webpack": "^5.99.5",
     "webpack-cli": "^6.0.1",
-    "wasmux": "^0.0.3-develop.5"
+    "wasmux": "^0.0.3-develop.6"
   }
 }

@@ -18,7 +18,8 @@ export default {
       INSTALL_PREFIX: "/usr",
       MAKE_PLUGIN_LIST: [ "${sourceRoot}/MakePlugin.mjs" ],
       WASMUX_ARCH: "seal",
-      WASMUX_ENABLE_PTHREAD_WITH_LIBC: true,
+      WASMUX_ENV_STUB: true,
+      WASMUX_PTHREAD_WITH_LIBC: true,
       WASMUX_ENABLE_THREADS: false,
       WASMUX_ENABLE_KERNEL: false,
       WASMUX_ENABLE_MAIN_ENV_ARG: false,
@@ -116,6 +117,17 @@ export default {
       },
     ],
     binaryDir: "${sourceDir}",
+  },
+
+  "bundle:xz": {
+    base: "base-configure",
+    sourceUrl: "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz",
+    action: "configure",
+    variables: {
+      host: "wasm32",
+      target: "wasm32",
+    },
+    destDir: "${binaryRoot}/sysroot",
   },
 
   "bundle:zstd": {
