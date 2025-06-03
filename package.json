@@ -1,6 +1,6 @@
 {
   "name": "libarchive",
-  "version": "0.0.1-develop.11",
+  "version": "0.0.1-develop.12",
   "description": "Multi-format archive and compression library",
   "author": "Yurii Yakubin",
   "homepage": "https://github.com/ykbin/libarchive-js#readme",
@@ -41,6 +41,8 @@
     "tar",
     "tgz",
     "untar",
+    "lzo",
+    "lzo2",
     "lz4",
     "lzma",
     "xz",
