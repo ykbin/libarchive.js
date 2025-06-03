@@ -6,6 +6,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 
 find_package(ZLIB REQUIRED)
+find_package(LZO REQUIRED)
 find_package(LZ4 REQUIRED)
 find_package(BZip2 REQUIRED)
 find_package(LibLZMA REQUIRED)
@@ -23,6 +24,7 @@ set(libarchive_INCLUDES
 
 set(libarchive_LIBRARIES
   ZLIB::ZLIB
+  LZO::LZO
   LZ4::LZ4
   BZip2::BZip2
   LibLZMA::LibLZMA

@@ -68,6 +68,17 @@ export default {
     destDir: "${binaryRoot}/sysroot",
   },
 
+  "bundle:lzo": {
+    base: "base-configure",
+    sourceUrl: "https://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz",
+    action: "configure",
+    variables: {
+      host: "none",
+      target: "none",
+    },
+    destDir: "${binaryRoot}/sysroot",
+  },
+
   "bundle:lz4": {
     base: "default",
     sourceUrl: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz",
@@ -158,6 +169,7 @@ export default {
       CMAKE_TOOLCHAIN_FILE: "${bundle:wasmux.destDir}/usr/share/wasmux/wasm32.toolchain.cmake",
       CMAKE_INSTALL_PREFIX: "/usr",
       BUILD_SHARED_LIBS: false,
+      ENABLE_LZO: true,
     },
     destDir: "${binaryRoot}/sysroot",
   },
