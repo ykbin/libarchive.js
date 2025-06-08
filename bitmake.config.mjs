@@ -1,6 +1,5 @@
 // RUN npm install
 // RUN npx bitmake build
-// RUN npm run build:typo
 // RUN npm run build:release
 
 export default {
@@ -20,10 +19,7 @@ export default {
       WASMUX_ARCH: "seal",
       WASMUX_ENV_STUB: true,
       WASMUX_PTHREAD_WITH_LIBC: true,
-      WASMUX_ENABLE_THREADS: false,
-      WASMUX_ENABLE_KERNEL: false,
-      WASMUX_ENABLE_MAIN_ENV_ARG: false,
-      WASMUX_ENABLE_WAEDITOR: false,
+      WASMUX_THREADS: false,
     },
     sourceDir: "${wasmux.mainDir}",
     destDir: "${binaryRoot}/sysroot",
